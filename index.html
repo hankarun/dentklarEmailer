@@ -1,0 +1,92 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Email Sender</title>
+  </head>
+  <body>
+    <div id="app-container">
+      <!-- Main Email Form -->
+      <div id="main-page">
+        <h1>📧 Email Sender</h1>
+        
+        <form id="email-form">
+          <div class="form-group">
+            <label for="name">Your Name:</label>
+            <input type="text" id="name" name="name" required placeholder="Enter your name">
+          </div>
+
+          <div class="form-group">
+            <label for="email">Your Email:</label>
+            <input type="email" id="email" name="email" required placeholder="your.email@example.com">
+          </div>
+
+          <div class="form-group">
+            <label for="message">Message:</label>
+            <textarea id="message" name="message" rows="8" required placeholder="Enter your message here..."></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>PDF Attachment:</label>
+            <div id="drop-zone" class="drop-zone">
+              <p class="drop-text">Drag & drop PDF here or <span id="browse-btn" class="browse-link">browse</span></p>
+              <p id="file-name" class="file-name"></p>
+            </div>
+            <input type="file" id="file-input" accept=".pdf" style="display: none;">
+          </div>
+
+          <button type="submit" id="send-btn" class="btn btn-primary">Send Email</button>
+        </form>
+
+        <div id="status-message" class="status-message"></div>
+      </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+          <h1 style="margin: 0;">⚙️ SMTP Settings</h1>
+          <button id="close-settings-btn" class="btn-close" title="Close">✕</button>
+        </div>
+        
+        <form id="settings-form">
+          <div class="form-group">
+            <label for="smtp-host">SMTP Host:</label>
+            <input type="text" id="smtp-host" name="host" required placeholder="smtp.gmail.com">
+          </div>
+
+          <div class="form-group">
+            <label for="smtp-port">Port:</label>
+            <input type="number" id="smtp-port" name="port" required placeholder="587">
+          </div>
+
+          <div class="form-group">
+            <label class="checkbox-label">
+              <input type="checkbox" id="smtp-secure" name="secure">
+              Use SSL/TLS (port 465)
+            </label>
+          </div>
+
+          <div class="form-group">
+            <label for="smtp-user">Username/Email:</label>
+            <input type="text" id="smtp-user" name="user" required placeholder="your.email@example.com">
+          </div>
+
+          <div class="form-group">
+            <label for="smtp-password">Password:</label>
+            <input type="password" id="smtp-password" name="password" required placeholder="Your password or app password">
+            <small class="hint">For Gmail, use an App Password (not your regular password)</small>
+          </div>
+
+          <div class="button-group">
+            <button type="button" id="test-btn" class="btn btn-secondary">Test Connection</button>
+            <button type="submit" id="save-settings-btn" class="btn btn-primary">Save Settings</button>
+          </div>
+        </form>
+
+        <div id="settings-status" class="status-message"></div>
+      </div>
+    </div>
+
+    <script type="module" src="/src/renderer.ts"></script>
+  </body>
+</html>
