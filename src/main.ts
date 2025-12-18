@@ -66,6 +66,7 @@ const createWindow = () => {
     width: 1000,
     height: 700,
     autoHideMenuBar: true,
+    icon: path.join(process.cwd(), 'img', 'dlogo.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -94,6 +95,7 @@ const createSettingsWindow = () => {
     width: 600,
     height: 700,
     title: 'SMTP Settings',
+    icon: path.join(process.cwd(), 'img', 'dlogo.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
@@ -126,6 +128,7 @@ const createTemplateWindow = () => {
     width: 800,
     height: 700,
     title: 'Edit Templates',
+    icon: path.join(process.cwd(), 'img', 'dlogo.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
