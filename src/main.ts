@@ -546,3 +546,30 @@ ipcMain.handle('delete-email-history', async (_, id: number) => {
     return { success: false, error: error.message };
   }
 });
+
+ipcMain.handle('get-email-pdf', async (_, id: number) => {
+  try {
+    const email = emailHistoryOperations.getById(id);
+    if (!email) {
+      return { success: false, error: 'Email not found' };
+    }
+    
+    if (!email.pdf_data || !email.pdf_filename) {
+      return { success: false, error: 'No PDF attached to this email' };
+    }
+
+    // Save PDF to temp directory
+    const tempDir = app.getPath('temp');
+    const tempFilePath = path.join(tempDir, `email-attachment-${Date.now()}-${email.pdf_filename}`);
+    
+    fs.writeFileSync(tempFilePath, email.pdf_data);
+    
+    return { 
+      success: true, 
+      filePath: tempFilePath,
+      filename: email.pdf_filename
+    };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});

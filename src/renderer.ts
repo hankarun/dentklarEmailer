@@ -62,6 +62,7 @@ declare global {
       searchEmailHistory: (query: string) => Promise<any>;
       getEmailStats: () => Promise<any>;
       deleteEmailHistory: (id: number) => Promise<any>;
+      getEmailPdf: (id: number) => Promise<{ success: boolean; filePath?: string; filename?: string; error?: string }>;
       // Events
       onTemplatesUpdated: (callback: () => void) => () => void;
     };
@@ -170,6 +171,44 @@ function initComposePage() {
   window.addEventListener('refresh-compose-templates', () => {
     loadTemplates();
   });
+
+  // Listen for repeat email event from history page
+  window.addEventListener('repeat-email', (async (e: CustomEvent) => {
+    const email = e.detail;
+    if (email) {
+      // Populate form fields with email data
+      nameInput.value = email.recipient_name || '';
+      (document.getElementById('email') as HTMLInputElement).value = email.recipient_email || '';
+      subjectInput.value = email.subject || '';
+      messageTextarea.value = email.message || '';
+      
+      // Try to detect anrede from the message or name
+      if (email.message?.includes('Sehr geehrter Herr') || email.message?.includes('Lieber Herr')) {
+        anredeSelect.value = 'Herr';
+      } else if (email.message?.includes('Sehr geehrte Frau') || email.message?.includes('Liebe Frau')) {
+        anredeSelect.value = 'Frau';
+      }
+      
+      // Clear template selection since we're using custom data
+      templateSelect.value = '';
+      selectedTemplateId = null;
+      
+      // Try to extract PDF from email history if it has one
+      if (email.pdf_filename) {
+        const pdfResult = await window.electronAPI.getEmailPdf(email.id);
+        if (pdfResult.success && pdfResult.filePath) {
+          selectedFile = pdfResult.filePath;
+          fileNameDisplay.textContent = `📄 ${pdfResult.filename}`;
+        } else {
+          selectedFile = null;
+          fileNameDisplay.textContent = '';
+        }
+      } else {
+        selectedFile = null;
+        fileNameDisplay.textContent = '';
+      }
+    }
+  }) as EventListener);
 
   async function loadTemplates() {
     try {
@@ -486,10 +525,26 @@ function renderHistoryList(history: any[]) {
       </div>
       <span class="history-item-status ${email.status}">${email.status === 'sent' ? 'Gesendet' : 'Fehlgeschlagen'}</span>
       <div class="history-item-actions">
+        <button class="btn-icon repeat" title="Wiederholen" data-repeat-id="${email.id}">🔄</button>
         <button class="btn-icon delete" title="Löschen" data-delete-id="${email.id}">🗑️</button>
       </div>
     </div>
   `).join('');
+
+  // Add repeat handlers
+  historyList.querySelectorAll('[data-repeat-id]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = parseInt((btn as HTMLElement).dataset.repeatId!);
+      const email = history.find(e => e.id === id);
+      if (email) {
+        // Dispatch event to populate compose form with email data
+        window.dispatchEvent(new CustomEvent('repeat-email', { detail: email }));
+        // Navigate to compose page
+        showPage('compose');
+      }
+    });
+  });
 
   // Add delete handlers
   historyList.querySelectorAll('[data-delete-id]').forEach(btn => {

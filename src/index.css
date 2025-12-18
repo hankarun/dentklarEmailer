@@ -532,6 +532,11 @@ textarea {
   color: #721c24;
 }
 
+.btn-icon.repeat:hover {
+  background: #d4edda;
+  color: #155724;
+}
+
 .empty-state {
   text-align: center;
   padding: 40px;

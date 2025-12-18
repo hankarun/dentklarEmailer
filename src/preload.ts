@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   searchEmailHistory: (query: string) => ipcRenderer.invoke('search-email-history', query),
   getEmailStats: () => ipcRenderer.invoke('get-email-stats'),
   deleteEmailHistory: (id: number) => ipcRenderer.invoke('delete-email-history', id),
+  getEmailPdf: (id: number) => ipcRenderer.invoke('get-email-pdf', id),
 
   // Event listeners
   onTemplatesUpdated: (callback: () => void) => {
