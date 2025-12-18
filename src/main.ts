@@ -218,9 +218,7 @@ ipcMain.handle('send-email', async (_, emailData) => {
       subject: `Message from ${emailData.name}`,
       text: emailData.message,
       html: `
-        <h3>Message from ${emailData.name}</h3>
-        <p><strong>Email:</strong> ${emailData.email}</p>
-        <p><strong>Message:</strong></p>
+        <h3>Message from DentKlar</h3>
         <p>${emailData.message.replace(/\n/g, '<br>')}</p>
       `,
     };
@@ -283,7 +281,7 @@ ipcMain.handle('extract-pdf-data', async (_, filePath: string) => {
     const lines = textAfterMarker.split('\n').filter(line => line.trim().length > 0);
     
     let name = '';
-    let article = '';
+    let anrede = '';
     
     // Based on the actual PDF structure:
     // After marker we have: Herrn, then name, then address
@@ -295,7 +293,12 @@ ipcMain.handle('extract-pdf-data', async (_, filePath: string) => {
         const line = lines[i].trim();
         // Check if this line is a title (Herrn, Frau, etc.)
         if (line.match(/^(Herrn|Herr|Frau|Dr\.|Prof\.)$/i)) {
-          article = line;
+          // Normalize "Herrn" (accusative) to "Herr" (nominative)
+          if (line.toLowerCase() === 'herrn') {
+            anrede = 'Herr';
+          } else {
+            anrede = line.charAt(0).toUpperCase() + line.slice(1).toLowerCase();
+          }
           nameLineIndex = i + 1;
           break;
         } else if (i === 0) {
@@ -314,7 +317,7 @@ ipcMain.handle('extract-pdf-data', async (_, filePath: string) => {
       success: true, 
       data: {
         name: name,
-        article: article,
+        anrede: anrede,
         extractedText: lines.slice(0, 5).join('\n') // Return first 5 lines for debugging
       }
     };

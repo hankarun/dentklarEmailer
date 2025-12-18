@@ -67,8 +67,37 @@ function initMainPage() {
   const statusMessage = document.getElementById('status-message') as HTMLDivElement;
   const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
   const nameInput = document.getElementById('name') as HTMLInputElement;
+  const anredeSelect = document.getElementById('anrede') as HTMLSelectElement;
+  const messageTextarea = document.getElementById('message') as HTMLTextAreaElement;
 
   let selectedFile: string | null = null;
+
+  // Template for invoice email - use {{ANREDE}} and {{NAME}} as placeholders
+  const invoiceTemplate = `Sehr geehrte{{ANREDE_SUFFIX}} {{ANREDE}} {{NAME}},
+
+anbei erhalten Sie Ihre Rechnung für die zahnärztliche Behandlung in unserer Praxis.
+
+Bitte überweisen Sie den Rechnungsbetrag innerhalb von 14 Tagen auf das in der Rechnung angegebene Konto.
+
+Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verfügung.
+
+Mit freundlichen Grüßen
+Ihre Zahnarztpraxis
+ZÄ Turan & Kaganaslan`;
+
+  // Function to generate message from template
+  function generateMessageFromTemplate(anrede: string, name: string): string {
+    let message = invoiceTemplate;
+    
+    // Set the suffix based on gender (r for Herr, empty for Frau)
+    const suffix = anrede === 'Herr' ? 'r' : '';
+    
+    message = message.replace('{{ANREDE_SUFFIX}}', suffix);
+    message = message.replace('{{ANREDE}}', anrede || '');
+    message = message.replace('{{NAME}}', name || '');
+    
+    return message;
+  }
 
   // Helper function to handle PDF selection and extraction
   async function handlePDFSelection() {
@@ -83,16 +112,24 @@ function initMainPage() {
       const extractResult = await window.electronAPI.extractPDFData(result.filePath);
       
       if (extractResult.success && extractResult.data) {
+        // Set the Anrede field with extracted salutation
+        if (extractResult.data.anrede) {
+          anredeSelect.value = extractResult.data.anrede;
+        }
+        
         // Set the name field with extracted data
         if (extractResult.data.name) {
           nameInput.value = extractResult.data.name;
-          showStatus(`Extracted: ${extractResult.data.name}`, 'success');
+          const anredeText = extractResult.data.anrede ? `${extractResult.data.anrede} ` : '';
+          showStatus(`Extracted: ${anredeText}${extractResult.data.name}`, 'success');
         }
         
-        // Optionally show article info
-        if (extractResult.data.article) {
-          console.log('Article:', extractResult.data.article);
-        }
+        // Generate and set the message from template
+        const generatedMessage = generateMessageFromTemplate(
+          extractResult.data.anrede || '',
+          extractResult.data.name || ''
+        );
+        messageTextarea.value = generatedMessage;
         
         // Show extracted text for debugging
         if (extractResult.data.extractedText) {
