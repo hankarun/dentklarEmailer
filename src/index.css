@@ -27,11 +27,16 @@ body {
 }
 
 .nav-brand {
-  font-size: 20px;
-  font-weight: 700;
-  padding: 10px 20px 30px;
+  padding: 15px 20px 25px;
   border-bottom: 1px solid rgba(255,255,255,0.2);
   margin-bottom: 20px;
+  text-align: center;
+}
+
+.nav-logo {
+  max-width: 160px;
+  height: auto;
+  filter: brightness(0) invert(1);
 }
 
 .nav-links {
