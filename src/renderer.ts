@@ -336,12 +336,12 @@ function initComposePage() {
     const subject = formData.get('subject') as string;
 
     if (!name || !email || !message) {
-      showStatus('Please fill in all required fields', 'error');
+      showEmailModal('error', 'Fehlende Felder', 'Bitte füllen Sie alle erforderlichen Felder aus.', '');
       return;
     }
 
     sendBtn.disabled = true;
-    sendBtn.textContent = 'Sending...';
+    sendBtn.textContent = 'Senden...';
 
     try {
       const result = await window.electronAPI.sendEmail({
@@ -355,20 +355,25 @@ function initComposePage() {
       });
 
       if (result.success) {
-        showStatus(result.message, 'success');
+        const details = `
+          <div class="detail-row"><span class="detail-label">Empfänger:</span> ${name} &lt;${email}&gt;</div>
+          <div class="detail-row"><span class="detail-label">Betreff:</span> ${subject || 'Kein Betreff'}</div>
+          ${selectedFile ? `<div class="detail-row"><span class="detail-label">Anhang:</span> ${selectedFile.split('/').pop() || selectedFile.split('\\').pop()}</div>` : ''}
+        `;
+        showEmailModal('success', 'Email erfolgreich gesendet!', result.message, details);
         emailForm.reset();
         selectedFile = null;
         fileNameDisplay.textContent = '';
         // Reload templates to restore selection
         loadTemplates();
       } else {
-        showStatus(result.error || 'Failed to send email', 'error');
+        showEmailModal('error', 'Senden fehlgeschlagen', 'Die Email konnte nicht gesendet werden.', `<div class="detail-row"><span class="detail-label">Fehler:</span> ${result.error || 'Unbekannter Fehler'}</div>`);
       }
     } catch (error) {
-      showStatus('An error occurred while sending the email', 'error');
+      showEmailModal('error', 'Fehler', 'Ein Fehler ist beim Senden aufgetreten.', '');
     } finally {
       sendBtn.disabled = false;
-      sendBtn.textContent = 'Send Email';
+      sendBtn.textContent = 'Email senden';
     }
   });
 
@@ -380,6 +385,50 @@ function initComposePage() {
       statusMessage.className = 'status-message';
     }, 5000);
   }
+}
+
+// Email Modal Functions
+function showEmailModal(type: 'success' | 'error', title: string, message: string, details: string) {
+  const modal = document.getElementById('email-modal');
+  const modalTitle = document.getElementById('modal-title');
+  const modalIcon = document.getElementById('modal-icon');
+  const modalMessage = document.getElementById('modal-message');
+  const modalDetails = document.getElementById('modal-details');
+  const modalCloseBtn = document.getElementById('modal-close');
+  const modalOkBtn = document.getElementById('modal-ok-btn');
+
+  if (!modal || !modalTitle || !modalIcon || !modalMessage || !modalDetails) return;
+
+  modalTitle.textContent = type === 'success' ? '✅ Erfolg' : '❌ Fehler';
+  modalIcon.textContent = type === 'success' ? '✉️' : '⚠️';
+  modalIcon.className = `modal-icon ${type}`;
+  modalMessage.textContent = title;
+  modalDetails.innerHTML = details;
+
+  modal.classList.add('show');
+
+  const closeModal = () => {
+    modal.classList.remove('show');
+  };
+
+  modalCloseBtn?.addEventListener('click', closeModal, { once: true });
+  modalOkBtn?.addEventListener('click', closeModal, { once: true });
+
+  // Close on overlay click
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      closeModal();
+    }
+  }, { once: true });
+
+  // Close on Escape key
+  const handleEscape = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', handleEscape);
+    }
+  };
+  document.addEventListener('keydown', handleEscape);
 }
 
 // Email History state
