@@ -6,22 +6,51 @@ import { MakerRpm } from '@electron-forge/maker-rpm';
 import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
+import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
+import path from 'path';
+import fs from 'fs';
 
 const config: ForgeConfig = {
   packagerConfig: {
-    asar: true,
+    asar: {
+      unpack: '**/{better-sqlite3,bindings,file-uri-to-path}/**/*',
+    },
     icon: './img/dlogo',
   },
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({
+      name: 'DentKlarEmailer',
       setupIcon: './img/dlogo.ico',
     }),
     new MakerZIP({}, ['darwin']),
     new MakerRpm({}),
     new MakerDeb({}),
   ],
+  hooks: {
+    packageAfterCopy: async (_config, buildPath) => {
+      // List of modules to copy
+      const modulesToCopy = [
+        'better-sqlite3',
+        'bindings',
+        'file-uri-to-path',
+        'pdf-parse',
+      ];
+
+      fs.mkdirSync(path.join(buildPath, 'node_modules'), { recursive: true });
+
+      for (const moduleName of modulesToCopy) {
+        const srcModule = path.join(__dirname, 'node_modules', moduleName);
+        const destModule = path.join(buildPath, 'node_modules', moduleName);
+        
+        if (fs.existsSync(srcModule) && !fs.existsSync(destModule)) {
+          fs.cpSync(srcModule, destModule, { recursive: true });
+        }
+      }
+    },
+  },
   plugins: [
+    new AutoUnpackNativesPlugin({}),
     new VitePlugin({
       // `build` can specify multiple entry builds, which can be Main process, Preload scripts, Worker process, etc.
       // If you are familiar with Vite configuration, it will look really familiar.
@@ -53,8 +82,8 @@ const config: ForgeConfig = {
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
       [FuseV1Options.EnableNodeCliInspectArguments]: false,
-      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
-      [FuseV1Options.OnlyLoadAppFromAsar]: true,
+      [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: false,
+      [FuseV1Options.OnlyLoadAppFromAsar]: false,
     }),
   ],
 };

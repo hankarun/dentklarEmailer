@@ -1,4 +1,6 @@
-import Database from 'better-sqlite3';
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const Database = require('better-sqlite3');
+import type BetterSqlite3 from 'better-sqlite3';
 import { app } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -28,7 +30,7 @@ export interface EmailHistory {
   sent_at?: string;
 }
 
-let db: Database.Database | null = null;
+let db: BetterSqlite3.Database | null = null;
 
 // Get database path in user data directory
 function getDbPath(): string {
@@ -37,7 +39,7 @@ function getDbPath(): string {
 }
 
 // Initialize database connection and create tables
-export function initDatabase(): Database.Database {
+export function initDatabase(): BetterSqlite3.Database {
   if (db) return db;
 
   const dbPath = getDbPath();
@@ -98,7 +100,7 @@ export function initDatabase(): Database.Database {
 }
 
 // Insert the default invoice template
-function insertDefaultTemplate(database: Database.Database): void {
+function insertDefaultTemplate(database: BetterSqlite3.Database): void {
   const defaultTemplate = {
     name: 'Rechnung (Standard)',
     subject: 'Ihre Rechnung - Zahnarztpraxis ZÄ Turan & Kaganaslan',
@@ -123,7 +125,7 @@ ZÄ Turan & Kaganaslan`,
 }
 
 // Get database instance
-export function getDatabase(): Database.Database {
+export function getDatabase(): BetterSqlite3.Database {
   if (!db) {
     return initDatabase();
   }
