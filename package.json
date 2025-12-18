@@ -37,8 +37,10 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.0.3",
     "@types/nodemailer": "^7.0.4",
+    "better-sqlite3": "^12.5.0",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",
     "nodemailer": "^7.0.11",

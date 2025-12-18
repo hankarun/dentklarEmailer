@@ -222,3 +222,103 @@ textarea {
   background: #f0f0f0;
   color: #333;
 }
+
+/* Template Editor Page Styles */
+#templates-page #app-container,
+#templates-page {
+  max-width: 100%;
+}
+
+.template-layout {
+  display: flex;
+  gap: 30px;
+  min-height: 500px;
+}
+
+.template-list-container {
+  width: 250px;
+  flex-shrink: 0;
+  border-right: 1px solid #e0e0e0;
+  padding-right: 20px;
+}
+
+.template-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.template-list-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+.template-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.template-list-item {
+  padding: 12px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+}
+
+.template-list-item:hover {
+  background: #e9ecef;
+}
+
+.template-list-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.template-list-item.active .default-badge {
+  color: #ffd700;
+}
+
+.template-name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.default-badge {
+  color: #ffc107;
+  font-size: 16px;
+}
+
+.template-editor-container {
+  flex: 1;
+}
+
+.btn-danger {
+  background: #dc3545;
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #c82333;
+}
+
+/* Adjust app container for templates page */
+#app-container:has(#templates-page[style*="display: block"]) {
+  max-width: 900px;
+}
+

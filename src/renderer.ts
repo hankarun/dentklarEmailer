@@ -28,6 +28,16 @@
 
 import './index.css';
 
+interface Template {
+  id: number;
+  name: string;
+  subject: string;
+  body: string;
+  is_default: number;
+  created_at: string;
+  updated_at: string;
+}
+
 declare global {
   interface Window {
     electronAPI: {
@@ -38,16 +48,34 @@ declare global {
       selectPDF: () => Promise<any>;
       extractPDFData: (filePath: string) => Promise<any>;
       closeWindow: () => void;
+      // Template operations
+      getTemplates: () => Promise<{ success: boolean; templates?: Template[]; error?: string }>;
+      getTemplate: (id: number) => Promise<{ success: boolean; template?: Template; error?: string }>;
+      getDefaultTemplate: () => Promise<{ success: boolean; template?: Template; error?: string }>;
+      createTemplate: (template: any) => Promise<{ success: boolean; template?: Template; error?: string }>;
+      updateTemplate: (id: number, template: any) => Promise<{ success: boolean; template?: Template; error?: string }>;
+      deleteTemplate: (id: number) => Promise<{ success: boolean; error?: string }>;
+      setDefaultTemplate: (id: number) => Promise<{ success: boolean; error?: string }>;
+      // Email history
+      getEmailHistory: (limit?: number, offset?: number) => Promise<any>;
+      saveEmailHistory: (emailData: any) => Promise<any>;
+      searchEmailHistory: (query: string) => Promise<any>;
+      getEmailStats: () => Promise<any>;
+      deleteEmailHistory: (id: number) => Promise<any>;
+      // Events
+      onTemplatesUpdated: (callback: () => void) => () => void;
     };
   }
 }
 
-// Check if we're on settings page
+// Check which page to show
 const urlParams = new URLSearchParams(window.location.search);
-const isSettingsPage = urlParams.get('page') === 'settings';
+const page = urlParams.get('page');
 
-if (isSettingsPage) {
+if (page === 'settings') {
   initSettingsPage();
+} else if (page === 'templates') {
+  initTemplatesPage();
 } else {
   initMainPage();
 }
@@ -55,9 +83,11 @@ if (isSettingsPage) {
 function initMainPage() {
   const mainPage = document.getElementById('main-page');
   const settingsPage = document.getElementById('settings-page');
+  const templatesPage = document.getElementById('templates-page');
   
   if (mainPage) mainPage.style.display = 'block';
   if (settingsPage) settingsPage.style.display = 'none';
+  if (templatesPage) templatesPage.style.display = 'none';
 
   const emailForm = document.getElementById('email-form') as HTMLFormElement;
   const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
@@ -69,35 +99,106 @@ function initMainPage() {
   const nameInput = document.getElementById('name') as HTMLInputElement;
   const anredeSelect = document.getElementById('anrede') as HTMLSelectElement;
   const messageTextarea = document.getElementById('message') as HTMLTextAreaElement;
+  const templateSelect = document.getElementById('template-select') as HTMLSelectElement;
+  const subjectInput = document.getElementById('subject') as HTMLInputElement;
 
   let selectedFile: string | null = null;
+  let selectedTemplateId: number | null = null;
+  let templates: Template[] = [];
 
-  // Template for invoice email - use {{ANREDE}} and {{NAME}} as placeholders
-  const invoiceTemplate = `Sehr geehrte{{ANREDE_SUFFIX}} {{ANREDE}} {{NAME}},
+  // Load templates on page load
+  loadTemplates();
 
-anbei erhalten Sie Ihre Rechnung für die zahnärztliche Behandlung in unserer Praxis.
+  // Listen for template updates
+  window.electronAPI.onTemplatesUpdated(() => {
+    loadTemplates();
+  });
 
-Bitte überweisen Sie den Rechnungsbetrag innerhalb von 14 Tagen auf das in der Rechnung angegebene Konto.
+  async function loadTemplates() {
+    try {
+      const result = await window.electronAPI.getTemplates();
+      if (result.success && result.templates) {
+        templates = result.templates;
+        populateTemplateSelect();
+        
+        // Select default template if nothing selected yet
+        const defaultTemplate = templates.find(t => t.is_default);
+        if (defaultTemplate && !selectedTemplateId) {
+          templateSelect.value = String(defaultTemplate.id);
+          selectedTemplateId = defaultTemplate.id;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  }
 
-Bei Fragen zu Ihrer Rechnung stehen wir Ihnen gerne zur Verfügung.
+  function populateTemplateSelect() {
+    // Clear existing options except the first one
+    templateSelect.innerHTML = '<option value="">-- Vorlage wählen --</option>';
+    
+    templates.forEach(template => {
+      const option = document.createElement('option');
+      option.value = String(template.id);
+      option.textContent = template.name + (template.is_default ? ' ★' : '');
+      templateSelect.appendChild(option);
+    });
 
-Mit freundlichen Grüßen
-Ihre Zahnarztpraxis
-ZÄ Turan & Kaganaslan`;
+    // Restore selection if exists
+    if (selectedTemplateId) {
+      templateSelect.value = String(selectedTemplateId);
+    }
+  }
 
-  // Function to generate message from template
-  function generateMessageFromTemplate(anrede: string, name: string): string {
-    let message = invoiceTemplate;
+  // Template selection handler
+  templateSelect?.addEventListener('change', () => {
+    const templateId = parseInt(templateSelect.value);
+    selectedTemplateId = templateId || null;
+    
+    if (templateId) {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+        // Set subject
+        subjectInput.value = template.subject || '';
+        
+        // Apply template with current name/anrede if available
+        applyTemplate(template, anredeSelect.value, nameInput.value);
+      }
+    }
+  });
+
+  // Function to apply template with placeholders
+  function applyTemplate(template: Template, anrede: string, name: string): void {
+    let message = template.body;
     
     // Set the suffix based on gender (r for Herr, empty for Frau)
     const suffix = anrede === 'Herr' ? 'r' : '';
     
-    message = message.replace('{{ANREDE_SUFFIX}}', suffix);
-    message = message.replace('{{ANREDE}}', anrede || '');
-    message = message.replace('{{NAME}}', name || '');
+    message = message.replace(/\{\{ANREDE_SUFFIX\}\}/g, suffix);
+    message = message.replace(/\{\{ANREDE\}\}/g, anrede || '');
+    message = message.replace(/\{\{NAME\}\}/g, name || '');
     
-    return message;
+    messageTextarea.value = message;
   }
+
+  // Update message when anrede or name changes
+  anredeSelect?.addEventListener('change', () => {
+    if (selectedTemplateId) {
+      const template = templates.find(t => t.id === selectedTemplateId);
+      if (template) {
+        applyTemplate(template, anredeSelect.value, nameInput.value);
+      }
+    }
+  });
+
+  nameInput?.addEventListener('input', () => {
+    if (selectedTemplateId) {
+      const template = templates.find(t => t.id === selectedTemplateId);
+      if (template) {
+        applyTemplate(template, anredeSelect.value, nameInput.value);
+      }
+    }
+  });
 
   // Helper function to handle PDF selection and extraction
   async function handlePDFSelection() {
@@ -124,12 +225,15 @@ ZÄ Turan & Kaganaslan`;
           showStatus(`Extracted: ${anredeText}${extractResult.data.name}`, 'success');
         }
         
-        // Generate and set the message from template
-        const generatedMessage = generateMessageFromTemplate(
-          extractResult.data.anrede || '',
-          extractResult.data.name || ''
-        );
-        messageTextarea.value = generatedMessage;
+        // Apply current template with extracted data
+        if (selectedTemplateId) {
+          const template = templates.find(t => t.id === selectedTemplateId);
+          if (template) {
+            // Set subject from template
+            subjectInput.value = template.subject || '';
+            applyTemplate(template, extractResult.data.anrede || '', extractResult.data.name || '');
+          }
+        }
         
         // Show extracted text for debugging
         if (extractResult.data.extractedText) {
@@ -154,9 +258,6 @@ ZÄ Turan & Kaganaslan`;
   dropZone?.addEventListener('drop', async (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
-
-    // Trigger file selection dialog instead of using dropped file path
-    // This is necessary because file paths from drag/drop are restricted in Electron
     await handlePDFSelection();
   });
 
@@ -171,7 +272,6 @@ ZÄ Turan & Kaganaslan`;
     }
   });
 
-  // File input is no longer needed but keep for compatibility
   fileInput?.addEventListener('change', async () => {
     await handlePDFSelection();
   });
@@ -184,6 +284,7 @@ ZÄ Turan & Kaganaslan`;
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     const message = formData.get('message') as string;
+    const subject = formData.get('subject') as string;
 
     if (!name || !email || !message) {
       showStatus('Please fill in all required fields', 'error');
@@ -197,9 +298,11 @@ ZÄ Turan & Kaganaslan`;
       const result = await window.electronAPI.sendEmail({
         name,
         email,
-        recipientEmail: email, // You can modify this to send to a specific recipient
+        recipientEmail: email,
         message,
+        subject: subject || undefined,
         pdfPath: selectedFile,
+        templateId: selectedTemplateId,
       });
 
       if (result.success) {
@@ -207,6 +310,8 @@ ZÄ Turan & Kaganaslan`;
         emailForm.reset();
         selectedFile = null;
         fileNameDisplay.textContent = '';
+        // Reload templates to restore selection
+        loadTemplates();
       } else {
         showStatus(result.error || 'Failed to send email', 'error');
       }
@@ -231,9 +336,11 @@ ZÄ Turan & Kaganaslan`;
 function initSettingsPage() {
   const mainPage = document.getElementById('main-page');
   const settingsPage = document.getElementById('settings-page');
+  const templatesPage = document.getElementById('templates-page');
   
   if (mainPage) mainPage.style.display = 'none';
   if (settingsPage) settingsPage.style.display = 'block';
+  if (templatesPage) templatesPage.style.display = 'none';
 
   const settingsForm = document.getElementById('settings-form') as HTMLFormElement;
   const testBtn = document.getElementById('test-btn') as HTMLButtonElement;
@@ -341,5 +448,180 @@ function initSettingsPage() {
     setTimeout(() => {
       settingsStatus.className = 'status-message';
     }, 5000);
+  }
+}
+
+function initTemplatesPage() {
+  const mainPage = document.getElementById('main-page');
+  const settingsPage = document.getElementById('settings-page');
+  const templatesPage = document.getElementById('templates-page');
+  
+  if (mainPage) mainPage.style.display = 'none';
+  if (settingsPage) settingsPage.style.display = 'none';
+  if (templatesPage) templatesPage.style.display = 'block';
+
+  const templateList = document.getElementById('template-list') as HTMLUListElement;
+  const templateForm = document.getElementById('template-form') as HTMLFormElement;
+  const templateIdInput = document.getElementById('template-id') as HTMLInputElement;
+  const templateNameInput = document.getElementById('template-name') as HTMLInputElement;
+  const templateSubjectInput = document.getElementById('template-subject') as HTMLInputElement;
+  const templateBodyTextarea = document.getElementById('template-body') as HTMLTextAreaElement;
+  const templateDefaultCheckbox = document.getElementById('template-default') as HTMLInputElement;
+  const deleteBtn = document.getElementById('delete-template-btn') as HTMLButtonElement;
+  const newTemplateBtn = document.getElementById('new-template-btn') as HTMLButtonElement;
+  const closeBtn = document.getElementById('close-templates-btn') as HTMLButtonElement;
+  const templateStatus = document.getElementById('template-status') as HTMLDivElement;
+
+  let templates: Template[] = [];
+  let selectedTemplateId: number | null = null;
+
+  // Load templates
+  loadTemplates();
+
+  // Close button handler
+  closeBtn?.addEventListener('click', () => {
+    window.electronAPI.closeWindow();
+  });
+
+  // Escape key handler
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      window.electronAPI.closeWindow();
+    }
+  });
+
+  // New template button
+  newTemplateBtn?.addEventListener('click', () => {
+    clearForm();
+    selectedTemplateId = null;
+    deleteBtn.style.display = 'none';
+    templateNameInput.focus();
+  });
+
+  // Delete button
+  deleteBtn?.addEventListener('click', async () => {
+    if (!selectedTemplateId) return;
+    
+    if (!confirm('Vorlage wirklich löschen?')) return;
+
+    try {
+      const result = await window.electronAPI.deleteTemplate(selectedTemplateId);
+      if (result.success) {
+        showTemplateStatus('Vorlage gelöscht!', 'success');
+        clearForm();
+        selectedTemplateId = null;
+        deleteBtn.style.display = 'none';
+        loadTemplates();
+      } else {
+        showTemplateStatus(result.error || 'Löschen fehlgeschlagen', 'error');
+      }
+    } catch (error) {
+      showTemplateStatus('Fehler beim Löschen', 'error');
+    }
+  });
+
+  // Form submission
+  templateForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const templateData = {
+      name: templateNameInput.value,
+      subject: templateSubjectInput.value,
+      body: templateBodyTextarea.value,
+      is_default: templateDefaultCheckbox.checked ? 1 : 0,
+    };
+
+    try {
+      let result;
+      if (selectedTemplateId) {
+        result = await window.electronAPI.updateTemplate(selectedTemplateId, templateData);
+      } else {
+        result = await window.electronAPI.createTemplate(templateData);
+      }
+
+      if (result.success) {
+        showTemplateStatus('Vorlage gespeichert!', 'success');
+        if (result.template) {
+          selectedTemplateId = result.template.id;
+          deleteBtn.style.display = 'inline-block';
+        }
+        loadTemplates();
+      } else {
+        showTemplateStatus(result.error || 'Speichern fehlgeschlagen', 'error');
+      }
+    } catch (error) {
+      showTemplateStatus('Fehler beim Speichern', 'error');
+    }
+  });
+
+  async function loadTemplates() {
+    try {
+      const result = await window.electronAPI.getTemplates();
+      if (result.success && result.templates) {
+        templates = result.templates;
+        renderTemplateList();
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  }
+
+  function renderTemplateList() {
+    templateList.innerHTML = '';
+    
+    templates.forEach(template => {
+      const li = document.createElement('li');
+      li.className = 'template-list-item' + (template.id === selectedTemplateId ? ' active' : '');
+      li.innerHTML = `
+        <span class="template-name">${template.name}</span>
+        ${template.is_default ? '<span class="default-badge">★</span>' : ''}
+      `;
+      li.addEventListener('click', () => {
+        selectTemplate(template);
+      });
+      templateList.appendChild(li);
+    });
+  }
+
+  function selectTemplate(template: Template) {
+    selectedTemplateId = template.id;
+    templateIdInput.value = String(template.id);
+    templateNameInput.value = template.name;
+    templateSubjectInput.value = template.subject || '';
+    templateBodyTextarea.value = template.body;
+    templateDefaultCheckbox.checked = template.is_default === 1;
+    deleteBtn.style.display = 'inline-block';
+    
+    // Update active state in list
+    document.querySelectorAll('.template-list-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    const items = templateList.querySelectorAll('.template-list-item');
+    items.forEach((item, index) => {
+      if (templates[index].id === template.id) {
+        item.classList.add('active');
+      }
+    });
+  }
+
+  function clearForm() {
+    templateIdInput.value = '';
+    templateNameInput.value = '';
+    templateSubjectInput.value = '';
+    templateBodyTextarea.value = '';
+    templateDefaultCheckbox.checked = false;
+    
+    document.querySelectorAll('.template-list-item').forEach(item => {
+      item.classList.remove('active');
+    });
+  }
+
+  function showTemplateStatus(message: string, type: 'success' | 'error') {
+    templateStatus.textContent = message;
+    templateStatus.className = `status-message ${type}`;
+    
+    setTimeout(() => {
+      templateStatus.className = 'status-message';
+    }, 3000);
   }
 }

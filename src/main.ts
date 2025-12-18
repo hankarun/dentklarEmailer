@@ -6,6 +6,15 @@ import Store from 'electron-store';
 import fs from 'node:fs';
 const pdfParse = require('pdf-parse');
 
+// Database imports
+import { 
+  initDatabase, 
+  closeDatabase, 
+  templateOperations, 
+  emailHistoryOperations,
+  Template 
+} from './database';
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
   app.quit();
@@ -49,6 +58,13 @@ const template: Electron.MenuItemConstructorOptions[] = [
           createSettingsWindow();
         },
       },
+      {
+        label: 'Edit Templates',
+        accelerator: isMac ? 'Cmd+T' : 'Ctrl+T',
+        click: () => {
+          createTemplateWindow();
+        },
+      },
     ],
   },
   {
@@ -69,6 +85,7 @@ Menu.setApplicationMenu(menu);
 
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
+let templateWindow: BrowserWindow | null = null;
 
 const createWindow = () => {
   // Create the browser window.
@@ -125,10 +142,49 @@ const createSettingsWindow = () => {
   });
 };
 
+const createTemplateWindow = () => {
+  if (templateWindow) {
+    templateWindow.focus();
+    return;
+  }
+
+  templateWindow = new BrowserWindow({
+    width: 800,
+    height: 700,
+    title: 'Edit Templates',
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+    },
+    parent: mainWindow,
+  });
+
+  // Load template editor page
+  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
+    templateWindow.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}?page=templates`);
+  } else {
+    templateWindow.loadFile(
+      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+      { query: { page: 'templates' } }
+    );
+  }
+
+  templateWindow.on('closed', () => {
+    templateWindow = null;
+    // Notify main window to refresh templates
+    if (mainWindow) {
+      mainWindow.webContents.send('templates-updated');
+    }
+  });
+};
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.on('ready', () => {
+  // Initialize database
+  initDatabase();
+  createWindow();
+});
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
@@ -137,6 +193,11 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit();
   }
+});
+
+// Close database on app quit
+app.on('before-quit', () => {
+  closeDatabase();
 });
 
 app.on('activate', () => {
@@ -195,6 +256,9 @@ ipcMain.handle('test-smtp-connection', async (_, settings) => {
 });
 
 ipcMain.handle('send-email', async (_, emailData) => {
+  let pdfData: Buffer | null = null;
+  let pdfFilename: string | null = null;
+
   try {
     const settings = store.get('smtpSettings') as any;
     
@@ -212,10 +276,17 @@ ipcMain.handle('send-email', async (_, emailData) => {
       },
     });
 
+    // Read PDF data for storage if provided
+    if (emailData.pdfPath) {
+      pdfData = fs.readFileSync(emailData.pdfPath);
+      pdfFilename = path.basename(emailData.pdfPath);
+    }
+
+    const subject = emailData.subject || `Message from ${emailData.name}`;
     const mailOptions: any = {
       from: settings.user,
       to: emailData.recipientEmail,
-      subject: `Message from ${emailData.name}`,
+      subject: subject,
       text: emailData.message,
       html: `
         <h3>Message from DentKlar</h3>
@@ -234,8 +305,35 @@ ipcMain.handle('send-email', async (_, emailData) => {
     }
 
     await transporter.sendMail(mailOptions);
+
+    // Save to email history
+    emailHistoryOperations.create({
+      template_id: emailData.templateId || null,
+      recipient_name: emailData.name,
+      recipient_email: emailData.recipientEmail,
+      subject: subject,
+      message: emailData.message,
+      pdf_filename: pdfFilename,
+      pdf_data: pdfData,
+      status: 'sent',
+      error_message: null
+    });
+
     return { success: true, message: 'Email sent successfully!' };
   } catch (error) {
+    // Save failed email to history
+    emailHistoryOperations.create({
+      template_id: emailData.templateId || null,
+      recipient_name: emailData.name || '',
+      recipient_email: emailData.recipientEmail || '',
+      subject: emailData.subject || `Message from ${emailData.name}`,
+      message: emailData.message || '',
+      pdf_filename: pdfFilename,
+      pdf_data: pdfData,
+      status: 'failed',
+      error_message: error.message
+    });
+
     return { success: false, error: error.message };
   }
 });
@@ -332,4 +430,134 @@ ipcMain.handle('extract-pdf-data', async (_, filePath: string) => {
 ipcMain.on('close-window', (event) => {
   const window = BrowserWindow.fromWebContents(event.sender);
   window?.close();
+});
+
+// Template IPC Handlers
+ipcMain.handle('get-templates', async () => {
+  try {
+    const templates = templateOperations.getAll();
+    return { success: true, templates };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-template', async (_, id: number) => {
+  try {
+    const template = templateOperations.getById(id);
+    return { success: true, template };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-default-template', async () => {
+  try {
+    const template = templateOperations.getDefault();
+    return { success: true, template };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('create-template', async (_, templateData) => {
+  try {
+    const template = templateOperations.create(templateData);
+    return { success: true, template };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('update-template', async (_, id: number, templateData) => {
+  try {
+    const template = templateOperations.update(id, templateData);
+    return { success: true, template };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('delete-template', async (_, id: number) => {
+  try {
+    const result = templateOperations.delete(id);
+    return { success: result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('set-default-template', async (_, id: number) => {
+  try {
+    const result = templateOperations.setDefault(id);
+    return { success: result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// Email History IPC Handlers
+ipcMain.handle('get-email-history', async (_, limit?: number, offset?: number) => {
+  try {
+    const history = emailHistoryOperations.getAll(limit, offset);
+    return { success: true, history };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-email-history', async (_, emailData) => {
+  try {
+    // Read PDF data if path is provided
+    let pdfData: Buffer | null = null;
+    let pdfFilename: string | null = null;
+    
+    if (emailData.pdfPath) {
+      pdfData = fs.readFileSync(emailData.pdfPath);
+      pdfFilename = path.basename(emailData.pdfPath);
+    }
+
+    const historyEntry = emailHistoryOperations.create({
+      template_id: emailData.templateId || null,
+      recipient_name: emailData.name,
+      recipient_email: emailData.recipientEmail,
+      subject: emailData.subject || `Message from ${emailData.name}`,
+      message: emailData.message,
+      pdf_filename: pdfFilename,
+      pdf_data: pdfData,
+      status: emailData.status || 'sent',
+      error_message: emailData.errorMessage || null
+    });
+
+    return { success: true, entry: historyEntry };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('search-email-history', async (_, query: string) => {
+  try {
+    const history = emailHistoryOperations.search(query);
+    return { success: true, history };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-email-stats', async () => {
+  try {
+    const stats = emailHistoryOperations.getStats();
+    return { success: true, stats };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('delete-email-history', async (_, id: number) => {
+  try {
+    const result = emailHistoryOperations.delete(id);
+    return { success: result };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
 });

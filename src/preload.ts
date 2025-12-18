@@ -20,4 +20,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // Window control
   closeWindow: () => ipcRenderer.send('close-window'),
+
+  // Template operations
+  getTemplates: () => ipcRenderer.invoke('get-templates'),
+  getTemplate: (id: number) => ipcRenderer.invoke('get-template', id),
+  getDefaultTemplate: () => ipcRenderer.invoke('get-default-template'),
+  createTemplate: (template: any) => ipcRenderer.invoke('create-template', template),
+  updateTemplate: (id: number, template: any) => ipcRenderer.invoke('update-template', id, template),
+  deleteTemplate: (id: number) => ipcRenderer.invoke('delete-template', id),
+  setDefaultTemplate: (id: number) => ipcRenderer.invoke('set-default-template', id),
+
+  // Email history operations
+  getEmailHistory: (limit?: number, offset?: number) => ipcRenderer.invoke('get-email-history', limit, offset),
+  saveEmailHistory: (emailData: any) => ipcRenderer.invoke('save-email-history', emailData),
+  searchEmailHistory: (query: string) => ipcRenderer.invoke('search-email-history', query),
+  getEmailStats: () => ipcRenderer.invoke('get-email-stats'),
+  deleteEmailHistory: (id: number) => ipcRenderer.invoke('delete-email-history', id),
+
+  // Event listeners
+  onTemplatesUpdated: (callback: () => void) => {
+    ipcRenderer.on('templates-updated', callback);
+    return () => ipcRenderer.removeListener('templates-updated', callback);
+  },
 });
