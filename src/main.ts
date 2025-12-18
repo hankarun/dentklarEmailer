@@ -25,63 +25,8 @@ const store = new Store();
 
 const isMac = process.platform === 'darwin';
 
-const template: Electron.MenuItemConstructorOptions[] = [
-  ...(isMac
-    ? [
-        {
-          label: app.name,
-          submenu: [
-            { role: 'about' },
-            { type: 'separator' },
-            { role: 'services' },
-            { type: 'separator' },
-            { role: 'hide' },
-            { role: 'hideOthers' },
-            { role: 'unhide' },
-            { type: 'separator' },
-            { role: 'quit' },
-          ],
-        } as Electron.MenuItemConstructorOptions,
-      ]
-    : []),
-  {
-    label: 'File',
-    submenu: [isMac ? { role: 'close' } : { role: 'quit' }] as Electron.MenuItemConstructorOptions[],
-  },
-  {
-    label: 'Settings',
-    submenu: [
-      {
-        label: 'Preferences',
-        accelerator: isMac ? 'Cmd+,' : 'Ctrl+,',
-        click: () => {
-          createSettingsWindow();
-        },
-      },
-      {
-        label: 'Edit Templates',
-        accelerator: isMac ? 'Cmd+T' : 'Ctrl+T',
-        click: () => {
-          createTemplateWindow();
-        },
-      },
-    ],
-  },
-  {
-    role: 'help',
-    submenu: [
-      {
-        label: 'Learn More',
-        click: async () => {
-          await shell.openExternal('https://electronjs.org');
-        },
-      },
-    ],
-  },
-];
-
-const menu = Menu.buildFromTemplate(template);
-Menu.setApplicationMenu(menu);
+// Remove menu bar
+Menu.setApplicationMenu(null);
 
 let mainWindow: BrowserWindow | null = null;
 let settingsWindow: BrowserWindow | null = null;
@@ -90,8 +35,9 @@ let templateWindow: BrowserWindow | null = null;
 const createWindow = () => {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
+    width: 1000,
+    height: 700,
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },

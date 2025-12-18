@@ -72,22 +72,71 @@ declare global {
 const urlParams = new URLSearchParams(window.location.search);
 const page = urlParams.get('page');
 
+// Initialize navigation
+initNavigation();
+
+// Initialize all pages
+initComposePage();
+initHistoryPage();
+initSettingsPage();
+initTemplatesPage();
+
+// Show initial page
 if (page === 'settings') {
-  initSettingsPage();
+  showPage('settings');
 } else if (page === 'templates') {
-  initTemplatesPage();
+  showPage('templates');
+} else if (page === 'history') {
+  showPage('history');
 } else {
-  initMainPage();
+  showPage('compose');
 }
 
-function initMainPage() {
-  const mainPage = document.getElementById('main-page');
-  const settingsPage = document.getElementById('settings-page');
-  const templatesPage = document.getElementById('templates-page');
+function initNavigation() {
+  const navLinks = document.querySelectorAll('.nav-link');
   
-  if (mainPage) mainPage.style.display = 'block';
-  if (settingsPage) settingsPage.style.display = 'none';
-  if (templatesPage) templatesPage.style.display = 'none';
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const pageName = (link as HTMLElement).dataset.page;
+      if (pageName) {
+        showPage(pageName);
+      }
+    });
+  });
+}
+
+function showPage(pageName: string) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(page => {
+    (page as HTMLElement).style.display = 'none';
+  });
+  
+  // Remove active class from all nav links
+  document.querySelectorAll('.nav-link').forEach(link => {
+    link.classList.remove('active');
+  });
+  
+  // Show selected page
+  const selectedPage = document.getElementById(`${pageName}-page`);
+  if (selectedPage) {
+    selectedPage.style.display = 'block';
+  }
+  
+  // Add active class to nav link
+  const selectedLink = document.querySelector(`.nav-link[data-page="${pageName}"]`);
+  if (selectedLink) {
+    selectedLink.classList.add('active');
+  }
+
+  // Trigger page-specific refresh
+  if (pageName === 'history') {
+    loadEmailHistory();
+  }
+}
+
+function initComposePage() {
+  const composePage = document.getElementById('compose-page');
 
   const emailForm = document.getElementById('email-form') as HTMLFormElement;
   const dropZone = document.getElementById('drop-zone') as HTMLDivElement;
@@ -333,19 +382,106 @@ function initMainPage() {
   }
 }
 
-function initSettingsPage() {
-  const mainPage = document.getElementById('main-page');
-  const settingsPage = document.getElementById('settings-page');
-  const templatesPage = document.getElementById('templates-page');
-  
-  if (mainPage) mainPage.style.display = 'none';
-  if (settingsPage) settingsPage.style.display = 'block';
-  if (templatesPage) templatesPage.style.display = 'none';
+// Email History state
+let emailHistoryData: any[] = [];
 
+function loadEmailHistory() {
+  const historyList = document.getElementById('history-list');
+  const historyStats = document.getElementById('history-stats');
+  
+  if (!historyList) return;
+
+  window.electronAPI.getEmailHistory(100, 0).then(result => {
+    if (result.success && result.history) {
+      emailHistoryData = result.history;
+      renderHistoryList(emailHistoryData);
+    }
+  });
+
+  window.electronAPI.getEmailStats().then(result => {
+    if (result.success && result.stats && historyStats) {
+      const stats = result.stats;
+      historyStats.textContent = `Total: ${stats.total} | Sent: ${stats.sent} | Failed: ${stats.failed}`;
+    }
+  });
+}
+
+function renderHistoryList(history: any[]) {
+  const historyList = document.getElementById('history-list');
+  if (!historyList) return;
+
+  if (history.length === 0) {
+    historyList.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">📭</div>
+        <p>Keine E-Mails gesendet</p>
+      </div>
+    `;
+    return;
+  }
+
+  historyList.innerHTML = history.map(email => `
+    <div class="history-item" data-id="${email.id}">
+      <div class="history-item-info">
+        <div class="history-item-recipient">${email.recipient_name} &lt;${email.recipient_email}&gt;</div>
+        <div class="history-item-subject">${email.subject || 'Kein Betreff'}</div>
+        <div class="history-item-date">${formatDate(email.sent_at)}</div>
+      </div>
+      <span class="history-item-status ${email.status}">${email.status === 'sent' ? 'Gesendet' : 'Fehlgeschlagen'}</span>
+      <div class="history-item-actions">
+        <button class="btn-icon delete" title="Löschen" data-delete-id="${email.id}">🗑️</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Add delete handlers
+  historyList.querySelectorAll('[data-delete-id]').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const id = parseInt((btn as HTMLElement).dataset.deleteId!);
+      if (confirm('E-Mail-Eintrag wirklich löschen?')) {
+        const result = await window.electronAPI.deleteEmailHistory(id);
+        if (result.success) {
+          loadEmailHistory();
+        }
+      }
+    });
+  });
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('de-DE', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function initHistoryPage() {
+  const searchInput = document.getElementById('history-search') as HTMLInputElement;
+  
+  searchInput?.addEventListener('input', () => {
+    const query = searchInput.value.toLowerCase();
+    if (query.length === 0) {
+      renderHistoryList(emailHistoryData);
+    } else {
+      const filtered = emailHistoryData.filter(email => 
+        email.recipient_name?.toLowerCase().includes(query) ||
+        email.recipient_email?.toLowerCase().includes(query) ||
+        email.subject?.toLowerCase().includes(query)
+      );
+      renderHistoryList(filtered);
+    }
+  });
+}
+
+function initSettingsPage() {
   const settingsForm = document.getElementById('settings-form') as HTMLFormElement;
   const testBtn = document.getElementById('test-btn') as HTMLButtonElement;
   const settingsStatus = document.getElementById('settings-status') as HTMLDivElement;
-  const closeBtn = document.getElementById('close-settings-btn') as HTMLButtonElement;
   const secureCheckbox = document.getElementById('smtp-secure') as HTMLInputElement;
   const portInput = document.getElementById('smtp-port') as HTMLInputElement;
 
@@ -355,18 +491,6 @@ function initSettingsPage() {
       portInput.value = '465';
     } else {
       portInput.value = '587';
-    }
-  });
-
-  // Close button handler
-  closeBtn?.addEventListener('click', () => {
-    window.electronAPI.closeWindow();
-  });
-
-  // Escape key handler
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      window.electronAPI.closeWindow();
     }
   });
 
@@ -452,14 +576,6 @@ function initSettingsPage() {
 }
 
 function initTemplatesPage() {
-  const mainPage = document.getElementById('main-page');
-  const settingsPage = document.getElementById('settings-page');
-  const templatesPage = document.getElementById('templates-page');
-  
-  if (mainPage) mainPage.style.display = 'none';
-  if (settingsPage) settingsPage.style.display = 'none';
-  if (templatesPage) templatesPage.style.display = 'block';
-
   const templateList = document.getElementById('template-list') as HTMLUListElement;
   const templateForm = document.getElementById('template-form') as HTMLFormElement;
   const templateIdInput = document.getElementById('template-id') as HTMLInputElement;
@@ -469,7 +585,6 @@ function initTemplatesPage() {
   const templateDefaultCheckbox = document.getElementById('template-default') as HTMLInputElement;
   const deleteBtn = document.getElementById('delete-template-btn') as HTMLButtonElement;
   const newTemplateBtn = document.getElementById('new-template-btn') as HTMLButtonElement;
-  const closeBtn = document.getElementById('close-templates-btn') as HTMLButtonElement;
   const templateStatus = document.getElementById('template-status') as HTMLDivElement;
 
   let templates: Template[] = [];
@@ -477,18 +592,6 @@ function initTemplatesPage() {
 
   // Load templates
   loadTemplates();
-
-  // Close button handler
-  closeBtn?.addEventListener('click', () => {
-    window.electronAPI.closeWindow();
-  });
-
-  // Escape key handler
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      window.electronAPI.closeWindow();
-    }
-  });
 
   // New template button
   newTemplateBtn?.addEventListener('click', () => {
