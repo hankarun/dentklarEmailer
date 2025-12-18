@@ -132,6 +132,9 @@ function showPage(pageName: string) {
   // Trigger page-specific refresh
   if (pageName === 'history') {
     loadEmailHistory();
+  } else if (pageName === 'compose') {
+    // Dispatch event to refresh templates on compose page
+    window.dispatchEvent(new CustomEvent('refresh-compose-templates'));
   }
 }
 
@@ -158,8 +161,13 @@ function initComposePage() {
   // Load templates on page load
   loadTemplates();
 
-  // Listen for template updates
+  // Listen for template updates from main process
   window.electronAPI.onTemplatesUpdated(() => {
+    loadTemplates();
+  });
+
+  // Listen for page navigation refresh
+  window.addEventListener('refresh-compose-templates', () => {
     loadTemplates();
   });
 

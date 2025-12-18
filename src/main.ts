@@ -406,6 +406,13 @@ ipcMain.on('close-window', (event) => {
   window?.close();
 });
 
+// Helper function to notify all windows about template updates
+function notifyTemplatesUpdated() {
+  BrowserWindow.getAllWindows().forEach(window => {
+    window.webContents.send('templates-updated');
+  });
+}
+
 // Template IPC Handlers
 ipcMain.handle('get-templates', async () => {
   try {
@@ -437,6 +444,7 @@ ipcMain.handle('get-default-template', async () => {
 ipcMain.handle('create-template', async (_, templateData) => {
   try {
     const template = templateOperations.create(templateData);
+    notifyTemplatesUpdated();
     return { success: true, template };
   } catch (error) {
     return { success: false, error: error.message };
@@ -446,6 +454,7 @@ ipcMain.handle('create-template', async (_, templateData) => {
 ipcMain.handle('update-template', async (_, id: number, templateData) => {
   try {
     const template = templateOperations.update(id, templateData);
+    notifyTemplatesUpdated();
     return { success: true, template };
   } catch (error) {
     return { success: false, error: error.message };
@@ -455,6 +464,7 @@ ipcMain.handle('update-template', async (_, id: number, templateData) => {
 ipcMain.handle('delete-template', async (_, id: number) => {
   try {
     const result = templateOperations.delete(id);
+    notifyTemplatesUpdated();
     return { success: result };
   } catch (error) {
     return { success: false, error: error.message };
@@ -464,6 +474,7 @@ ipcMain.handle('delete-template', async (_, id: number) => {
 ipcMain.handle('set-default-template', async (_, id: number) => {
   try {
     const result = templateOperations.setDefault(id);
+    notifyTemplatesUpdated();
     return { success: result };
   } catch (error) {
     return { success: false, error: error.message };
