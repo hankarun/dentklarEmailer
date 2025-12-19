@@ -678,3 +678,32 @@ textarea {
   min-width: 120px;
 }
 
+/* Settings divider */
+.settings-divider {
+  border: none;
+  border-top: 1px solid #e0e0e0;
+  margin: 25px 0;
+}
+
+/* Language selector in settings */
+.language-select {
+  max-width: 200px;
+}
+
+/* Settings groups */
+.settings-group {
+  background: #f8f9fa;
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.settings-group-title {
+  font-size: 16px;
+  color: #333;
+  margin: 0 0 15px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+

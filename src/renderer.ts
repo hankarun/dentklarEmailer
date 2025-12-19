@@ -27,6 +27,7 @@
  */
 
 import './index.css';
+import i18n, { t, changeLanguage, getCurrentLanguage } from './i18n';
 
 interface Template {
   id: number;
@@ -82,6 +83,16 @@ initHistoryPage();
 initSettingsPage();
 initTemplatesPage();
 
+// Apply translations on load
+updateAllTranslations();
+
+// Listen for language changes
+window.addEventListener('language-changed', () => {
+  updateAllTranslations();
+  // Re-render dynamic content
+  loadEmailHistory();
+});
+
 // Show initial page
 if (page === 'settings') {
   showPage('settings');
@@ -91,6 +102,25 @@ if (page === 'settings') {
   showPage('history');
 } else {
   showPage('compose');
+}
+
+// Function to update all translations in the UI
+function updateAllTranslations() {
+  // Update all elements with data-i18n attribute
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (key) {
+      el.textContent = t(key);
+    }
+  });
+  
+  // Update all placeholders
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.getAttribute('data-i18n-placeholder');
+    if (key) {
+      (el as HTMLInputElement).placeholder = t(key);
+    }
+  });
 }
 
 function initNavigation() {
@@ -231,7 +261,7 @@ function initComposePage() {
 
   function populateTemplateSelect() {
     // Clear existing options except the first one
-    templateSelect.innerHTML = '<option value="">-- Vorlage wählen --</option>';
+    templateSelect.innerHTML = `<option value="">${t('compose.selectTemplate')}</option>`;
     
     templates.forEach(template => {
       const option = document.createElement('option');
@@ -305,7 +335,7 @@ function initComposePage() {
       fileNameDisplay.textContent = `📄 ${fileName}`;
       
       // Extract data from PDF
-      showStatus('Extracting data from PDF...', 'success');
+      showStatus(t('compose.extracting'), 'success');
       const extractResult = await window.electronAPI.extractPDFData(result.filePath);
       
       if (extractResult.success && extractResult.data) {
@@ -318,7 +348,7 @@ function initComposePage() {
         if (extractResult.data.name) {
           nameInput.value = extractResult.data.name;
           const anredeText = extractResult.data.anrede ? `${extractResult.data.anrede} ` : '';
-          showStatus(`Extracted: ${anredeText}${extractResult.data.name}`, 'success');
+          showStatus(t('compose.extracted', { anrede: anredeText, name: extractResult.data.name }), 'success');
         }
         
         // Apply current template with extracted data
@@ -383,12 +413,12 @@ function initComposePage() {
     const subject = formData.get('subject') as string;
 
     if (!name || !email || !message) {
-      showEmailModal('error', 'Fehlende Felder', 'Bitte füllen Sie alle erforderlichen Felder aus.', '');
+      showEmailModal('error', t('modal.missingFields'), t('modal.missingFieldsMsg'), '');
       return;
     }
 
     sendBtn.disabled = true;
-    sendBtn.textContent = 'Senden...';
+    sendBtn.textContent = t('compose.sending');
 
     try {
       const result = await window.electronAPI.sendEmail({
@@ -403,24 +433,24 @@ function initComposePage() {
 
       if (result.success) {
         const details = `
-          <div class="detail-row"><span class="detail-label">Empfänger:</span> ${name} &lt;${email}&gt;</div>
-          <div class="detail-row"><span class="detail-label">Betreff:</span> ${subject || 'Kein Betreff'}</div>
-          ${selectedFile ? `<div class="detail-row"><span class="detail-label">Anhang:</span> ${selectedFile.split('/').pop() || selectedFile.split('\\').pop()}</div>` : ''}
+          <div class="detail-row"><span class="detail-label">${t('modal.recipient')}:</span> ${name} &lt;${email}&gt;</div>
+          <div class="detail-row"><span class="detail-label">${t('modal.subject')}:</span> ${subject || t('history.noSubject')}</div>
+          ${selectedFile ? `<div class="detail-row"><span class="detail-label">${t('modal.attachment')}:</span> ${selectedFile.split('/').pop() || selectedFile.split('\\').pop()}</div>` : ''}
         `;
-        showEmailModal('success', 'Email erfolgreich gesendet!', result.message, details);
+        showEmailModal('success', t('modal.emailSuccess'), result.message, details);
         emailForm.reset();
         selectedFile = null;
         fileNameDisplay.textContent = '';
         // Reload templates to restore selection
         loadTemplates();
       } else {
-        showEmailModal('error', 'Senden fehlgeschlagen', 'Die Email konnte nicht gesendet werden.', `<div class="detail-row"><span class="detail-label">Fehler:</span> ${result.error || 'Unbekannter Fehler'}</div>`);
+        showEmailModal('error', t('modal.emailFailed'), t('modal.emailFailed'), `<div class="detail-row"><span class="detail-label">${t('modal.errorLabel')}:</span> ${result.error || t('modal.unknownError')}</div>`);
       }
     } catch (error) {
-      showEmailModal('error', 'Fehler', 'Ein Fehler ist beim Senden aufgetreten.', '');
+      showEmailModal('error', t('modal.error'), t('modal.sendError'), '');
     } finally {
       sendBtn.disabled = false;
-      sendBtn.textContent = 'Email senden';
+      sendBtn.textContent = t('compose.send');
     }
   });
 
@@ -446,7 +476,7 @@ function showEmailModal(type: 'success' | 'error', title: string, message: strin
 
   if (!modal || !modalTitle || !modalIcon || !modalMessage || !modalDetails) return;
 
-  modalTitle.textContent = type === 'success' ? '✅ Erfolg' : '❌ Fehler';
+  modalTitle.textContent = type === 'success' ? t('modal.success') : t('modal.error');
   modalIcon.textContent = type === 'success' ? '✉️' : '⚠️';
   modalIcon.className = `modal-icon ${type}`;
   modalMessage.textContent = title;
@@ -497,7 +527,7 @@ function loadEmailHistory() {
   window.electronAPI.getEmailStats().then(result => {
     if (result.success && result.stats && historyStats) {
       const stats = result.stats;
-      historyStats.textContent = `Total: ${stats.total} | Sent: ${stats.sent} | Failed: ${stats.failed}`;
+      historyStats.textContent = t('history.stats', { total: stats.total, sent: stats.sent, failed: stats.failed });
     }
   });
 }
@@ -510,7 +540,7 @@ function renderHistoryList(history: any[]) {
     historyList.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">📭</div>
-        <p>Keine E-Mails gesendet</p>
+        <p>${t('history.noEmails')}</p>
       </div>
     `;
     return;
@@ -520,13 +550,13 @@ function renderHistoryList(history: any[]) {
     <div class="history-item" data-id="${email.id}">
       <div class="history-item-info">
         <div class="history-item-recipient">${email.recipient_name} &lt;${email.recipient_email}&gt;</div>
-        <div class="history-item-subject">${email.subject || 'Kein Betreff'}</div>
+        <div class="history-item-subject">${email.subject || t('history.noSubject')}</div>
         <div class="history-item-date">${formatDate(email.sent_at)}</div>
       </div>
-      <span class="history-item-status ${email.status}">${email.status === 'sent' ? 'Gesendet' : 'Fehlgeschlagen'}</span>
+      <span class="history-item-status ${email.status}">${email.status === 'sent' ? t('history.sent') : t('history.failed')}</span>
       <div class="history-item-actions">
-        <button class="btn-icon repeat" title="Wiederholen" data-repeat-id="${email.id}">🔄</button>
-        <button class="btn-icon delete" title="Löschen" data-delete-id="${email.id}">🗑️</button>
+        <button class="btn-icon repeat" title="${t('history.repeat')}" data-repeat-id="${email.id}">🔄</button>
+        <button class="btn-icon delete" title="${t('history.delete')}" data-delete-id="${email.id}">🗑️</button>
       </div>
     </div>
   `).join('');
@@ -551,7 +581,7 @@ function renderHistoryList(history: any[]) {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = parseInt((btn as HTMLElement).dataset.deleteId!);
-      if (confirm('E-Mail-Eintrag wirklich löschen?')) {
+      if (confirm(t('history.confirmDelete'))) {
         const result = await window.electronAPI.deleteEmailHistory(id);
         if (result.success) {
           loadEmailHistory();
@@ -596,6 +626,13 @@ function initSettingsPage() {
   const settingsStatus = document.getElementById('settings-status') as HTMLDivElement;
   const secureCheckbox = document.getElementById('smtp-secure') as HTMLInputElement;
   const portInput = document.getElementById('smtp-port') as HTMLInputElement;
+  const languageSelect = document.getElementById('language-select') as HTMLSelectElement;
+
+  // Initialize language selector
+  languageSelect.value = getCurrentLanguage();
+  languageSelect.addEventListener('change', () => {
+    changeLanguage(languageSelect.value);
+  });
 
   // Auto-update port when TLS checkbox changes
   secureCheckbox?.addEventListener('change', () => {
@@ -630,7 +667,7 @@ function initSettingsPage() {
     const settings = getFormSettings();
     
     testBtn.disabled = true;
-    testBtn.textContent = 'Testing...';
+    testBtn.textContent = t('settings.testing');
 
     try {
       const result = await window.electronAPI.testSMTPConnection(settings);
@@ -644,7 +681,7 @@ function initSettingsPage() {
       showSettingsStatus('Failed to test connection', 'error');
     } finally {
       testBtn.disabled = false;
-      testBtn.textContent = 'Test Connection';
+      testBtn.textContent = t('settings.test');
     }
   });
 
@@ -658,12 +695,12 @@ function initSettingsPage() {
       const result = await window.electronAPI.saveSMTPSettings(settings);
       
       if (result.success) {
-        showSettingsStatus('Settings saved successfully!', 'success');
+        showSettingsStatus(t('settings.saved'), 'success');
       } else {
-        showSettingsStatus(result.error || 'Failed to save settings', 'error');
+        showSettingsStatus(result.error || t('settings.saveFailed'), 'error');
       }
     } catch (error) {
-      showSettingsStatus('Failed to save settings', 'error');
+      showSettingsStatus(t('settings.saveFailed'), 'error');
     }
   });
 
@@ -717,21 +754,21 @@ function initTemplatesPage() {
   deleteBtn?.addEventListener('click', async () => {
     if (!selectedTemplateId) return;
     
-    if (!confirm('Vorlage wirklich löschen?')) return;
+    if (!confirm(t('templates.confirmDelete'))) return;
 
     try {
       const result = await window.electronAPI.deleteTemplate(selectedTemplateId);
       if (result.success) {
-        showTemplateStatus('Vorlage gelöscht!', 'success');
+        showTemplateStatus(t('templates.deleted'), 'success');
         clearForm();
         selectedTemplateId = null;
         deleteBtn.style.display = 'none';
         loadTemplates();
       } else {
-        showTemplateStatus(result.error || 'Löschen fehlgeschlagen', 'error');
+        showTemplateStatus(result.error || t('templates.deleteFailed'), 'error');
       }
     } catch (error) {
-      showTemplateStatus('Fehler beim Löschen', 'error');
+      showTemplateStatus(t('templates.deleteFailed'), 'error');
     }
   });
 
@@ -755,17 +792,17 @@ function initTemplatesPage() {
       }
 
       if (result.success) {
-        showTemplateStatus('Vorlage gespeichert!', 'success');
+        showTemplateStatus(t('templates.saved'), 'success');
         if (result.template) {
           selectedTemplateId = result.template.id;
           deleteBtn.style.display = 'inline-block';
         }
         loadTemplates();
       } else {
-        showTemplateStatus(result.error || 'Speichern fehlgeschlagen', 'error');
+        showTemplateStatus(result.error || t('templates.saveFailed'), 'error');
       }
     } catch (error) {
-      showTemplateStatus('Fehler beim Speichern', 'error');
+      showTemplateStatus(t('templates.saveFailed'), 'error');
     }
   });
 

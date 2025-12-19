@@ -3,6 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <title>Email Sender</title>
+    <link rel="stylesheet" href="/src/index.css">
   </head>
   <body>
     <div id="app-wrapper">
@@ -12,65 +13,65 @@
           <img src="/img/Dentklar-logo.svg" alt="DentKlar" class="nav-logo">
         </div>
         <ul class="nav-links">
-          <li><a href="#" class="nav-link active" data-page="compose">✉️ Compose</a></li>
-          <li><a href="#" class="nav-link" data-page="history">📋 Previous Emails</a></li>
-          <li><a href="#" class="nav-link" data-page="templates">📝 Templates</a></li>
-          <li><a href="#" class="nav-link" data-page="settings">⚙️ Settings</a></li>
+          <li><a href="#" class="nav-link active" data-page="compose" data-i18n="nav.compose">✉️ Verfassen</a></li>
+          <li><a href="#" class="nav-link" data-page="history" data-i18n="nav.history">📋 Bisherige E-Mails</a></li>
+          <li><a href="#" class="nav-link" data-page="templates" data-i18n="nav.templates">📝 Vorlagen</a></li>
+          <li><a href="#" class="nav-link" data-page="settings" data-i18n="nav.settings">⚙️ Einstellungen</a></li>
         </ul>
       </nav>
 
       <div id="app-container">
         <!-- Compose Email Page -->
         <div id="compose-page" class="page">
-          <h2>✉️ Compose Email</h2>
+          <h2 data-i18n="compose.title">✉️ E-Mail verfassen</h2>
           
           <form id="email-form">
             <div class="form-group">
-              <label for="template-select">Vorlage:</label>
+              <label for="template-select" data-i18n="compose.template">Vorlage:</label>
               <select id="template-select" name="template">
-                <option value="">-- Vorlage wählen --</option>
+                <option value="" data-i18n="compose.selectTemplate">-- Vorlage wählen --</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label for="anrede">Anrede:</label>
+              <label for="anrede" data-i18n="compose.anrede">Anrede:</label>
               <select id="anrede" name="anrede">
-                <option value="">-- Bitte wählen --</option>
-                <option value="Herr">Herr</option>
-                <option value="Frau">Frau</option>
+                <option value="" data-i18n="compose.selectAnrede">-- Bitte wählen --</option>
+                <option value="Herr" data-i18n="compose.herr">Herr</option>
+                <option value="Frau" data-i18n="compose.frau">Frau</option>
               </select>
             </div>
 
             <div class="form-group">
-              <label for="name">Name:</label>
-              <input type="text" id="name" name="name" required placeholder="Empfängername">
+              <label for="name" data-i18n="compose.name">Name:</label>
+              <input type="text" id="name" name="name" required data-i18n-placeholder="compose.namePlaceholder" placeholder="Empfängername">
             </div>
 
             <div class="form-group">
-              <label for="email">Email:</label>
-              <input type="email" id="email" name="email" required placeholder="empfaenger@example.com">
+              <label for="email" data-i18n="compose.email">E-Mail:</label>
+              <input type="email" id="email" name="email" required data-i18n-placeholder="compose.emailPlaceholder" placeholder="empfaenger@example.com">
             </div>
 
             <div class="form-group">
-              <label for="subject">Betreff:</label>
-              <input type="text" id="subject" name="subject" placeholder="Email-Betreff">
+              <label for="subject" data-i18n="compose.subject">Betreff:</label>
+              <input type="text" id="subject" name="subject" data-i18n-placeholder="compose.subjectPlaceholder" placeholder="E-Mail-Betreff">
             </div>
 
             <div class="form-group">
-              <label for="message">Nachricht:</label>
-              <textarea id="message" name="message" rows="8" required placeholder="Nachricht eingeben..."></textarea>
+              <label for="message" data-i18n="compose.message">Nachricht:</label>
+              <textarea id="message" name="message" rows="8" required data-i18n-placeholder="compose.messagePlaceholder" placeholder="Nachricht eingeben..."></textarea>
             </div>
 
             <div class="form-group">
-              <label>PDF Anhang:</label>
+              <label data-i18n="compose.pdfAttachment">PDF Anhang:</label>
               <div id="drop-zone" class="drop-zone">
-                <p class="drop-text">PDF hier ablegen oder <span id="browse-btn" class="browse-link">durchsuchen</span></p>
+                <p class="drop-text"><span data-i18n="compose.dropPdf">PDF hier ablegen oder</span> <span id="browse-btn" class="browse-link" data-i18n="compose.browse">durchsuchen</span></p>
                 <p id="file-name" class="file-name"></p>
               </div>
               <input type="file" id="file-input" accept=".pdf" style="display: none;">
             </div>
 
-            <button type="submit" id="send-btn" class="btn btn-primary">Email senden</button>
+            <button type="submit" id="send-btn" class="btn btn-primary" data-i18n="compose.send">E-Mail senden</button>
           </form>
 
           <div id="status-message" class="status-message"></div>
@@ -78,10 +79,10 @@
 
         <!-- Email History Page -->
         <div id="history-page" class="page" style="display: none;">
-          <h2>📋 Previous Emails</h2>
+          <h2 data-i18n="history.title">📋 Bisherige E-Mails</h2>
           
           <div class="history-toolbar">
-            <input type="text" id="history-search" placeholder="Suchen..." class="search-input">
+            <input type="text" id="history-search" data-i18n-placeholder="history.search" placeholder="Suchen..." class="search-input">
             <div class="history-stats" id="history-stats"></div>
           </div>
 
@@ -94,57 +95,73 @@
 
         <!-- Settings Page -->
         <div id="settings-page" class="page" style="display: none;">
-          <h2>⚙️ SMTP Settings</h2>
-          
-          <form id="settings-form">
+          <h2 data-i18n="settings.title">⚙️ Einstellungen</h2>
+
+          <!-- Language Settings Group -->
+          <div class="settings-group">
+            <h3 class="settings-group-title" data-i18n="settings.languageTitle">🌐 Sprache</h3>
             <div class="form-group">
-              <label for="smtp-host">SMTP Host:</label>
-              <input type="text" id="smtp-host" name="host" required placeholder="smtp.gmail.com">
+              <label for="language-select" data-i18n="language.select">Sprache:</label>
+              <select id="language-select" class="language-select">
+                <option value="de">🇩🇪 Deutsch</option>
+                <option value="en">🇬🇧 English</option>
+              </select>
             </div>
+          </div>
 
-            <div class="form-group">
-              <label for="smtp-port">Port:</label>
-              <input type="number" id="smtp-port" name="port" required placeholder="587">
-            </div>
+          <!-- SMTP Settings Group -->
+          <div class="settings-group">
+            <h3 class="settings-group-title" data-i18n="settings.smtpTitle">📧 SMTP Einstellungen</h3>
+            <form id="settings-form">
+              <div class="form-group">
+                <label for="smtp-host" data-i18n="settings.host">SMTP Host:</label>
+                <input type="text" id="smtp-host" name="host" required data-i18n-placeholder="settings.hostPlaceholder" placeholder="smtp.gmail.com">
+              </div>
 
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input type="checkbox" id="smtp-secure" name="secure">
-                Use SSL/TLS (port 465)
-              </label>
-            </div>
+              <div class="form-group">
+                <label for="smtp-port" data-i18n="settings.port">Port:</label>
+                <input type="number" id="smtp-port" name="port" required data-i18n-placeholder="settings.portPlaceholder" placeholder="587">
+              </div>
 
-            <div class="form-group">
-              <label for="smtp-user">Username/Email:</label>
-              <input type="text" id="smtp-user" name="user" required placeholder="your.email@example.com">
-            </div>
+              <div class="form-group">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="smtp-secure" name="secure">
+                  <span data-i18n="settings.secure">SSL/TLS verwenden (Port 465)</span>
+                </label>
+              </div>
 
-            <div class="form-group">
-              <label for="smtp-password">Password:</label>
-              <input type="password" id="smtp-password" name="password" required placeholder="Your password or app password">
-              <small class="hint">For Gmail, use an App Password (not your regular password)</small>
-            </div>
+              <div class="form-group">
+                <label for="smtp-user" data-i18n="settings.user">Benutzername/E-Mail:</label>
+                <input type="text" id="smtp-user" name="user" required data-i18n-placeholder="settings.userPlaceholder" placeholder="ihre.email@example.com">
+              </div>
 
-            <div class="button-group">
-              <button type="button" id="test-btn" class="btn btn-secondary">Test Connection</button>
-              <button type="submit" id="save-settings-btn" class="btn btn-primary">Save Settings</button>
-            </div>
-          </form>
+              <div class="form-group">
+                <label for="smtp-password" data-i18n="settings.password">Passwort:</label>
+                <input type="password" id="smtp-password" name="password" required data-i18n-placeholder="settings.passwordPlaceholder" placeholder="Ihr Passwort oder App-Passwort">
+                <small class="hint" data-i18n="settings.passwordHint">Für Gmail ein App-Passwort verwenden (nicht Ihr normales Passwort)</small>
+              </div>
 
-          <div id="settings-status" class="status-message"></div>
+              <div class="button-group">
+                <button type="button" id="test-btn" class="btn btn-secondary" data-i18n="settings.test">Verbindung testen</button>
+                <button type="submit" id="save-settings-btn" class="btn btn-primary" data-i18n="settings.save">Einstellungen speichern</button>
+              </div>
+            </form>
+
+            <div id="settings-status" class="status-message"></div>
+          </div>
         </div>
 
         <!-- Template Editor Page -->
         <div id="templates-page" class="page" style="display: none;">
-          <h2>📝 Vorlagen verwalten</h2>
+          <h2 data-i18n="templates.title">📝 Vorlagen verwalten</h2>
 
           <div class="template-layout">
             <!-- Template List -->
             <div class="template-list-container">
               <div class="template-list-header">
-                <h3>Vorlagen</h3>
+                <h3 data-i18n="templates.listTitle">Vorlagen</h3>
               </div>
-              <button type="button" id="new-template-btn" class="btn btn-small btn-primary">+ Neu</button>
+              <button type="button" id="new-template-btn" class="btn btn-small btn-primary" data-i18n="templates.new">+ Neu</button>
               <ul id="template-list" class="template-list">
                 <!-- Templates will be populated here -->
               </ul>
@@ -156,31 +173,31 @@
                 <input type="hidden" id="template-id" value="">
                 
                 <div class="form-group">
-                  <label for="template-name">Name:</label>
-                  <input type="text" id="template-name" name="name" required placeholder="Vorlagenname">
+                  <label for="template-name" data-i18n="templates.name">Name:</label>
+                  <input type="text" id="template-name" name="name" required data-i18n-placeholder="templates.namePlaceholder" placeholder="Vorlagenname">
                 </div>
 
                 <div class="form-group">
-                  <label for="template-subject">Betreff:</label>
-                  <input type="text" id="template-subject" name="subject" placeholder="Email-Betreff">
+                  <label for="template-subject" data-i18n="templates.subject">Betreff:</label>
+                  <input type="text" id="template-subject" name="subject" data-i18n-placeholder="templates.subjectPlaceholder" placeholder="E-Mail-Betreff">
                 </div>
 
                 <div class="form-group">
-                  <label for="template-body">Nachricht:</label>
-                  <textarea id="template-body" name="body" rows="12" required placeholder="Nachrichtentext..."></textarea>
-                  <small class="hint">Platzhalter: {{ANREDE}}, {{ANREDE_SUFFIX}}, {{NAME}}</small>
+                  <label for="template-body" data-i18n="templates.body">Nachricht:</label>
+                  <textarea id="template-body" name="body" rows="12" required data-i18n-placeholder="templates.bodyPlaceholder" placeholder="Nachrichtentext..."></textarea>
+                  <small class="hint" data-i18n="templates.bodyHint">Platzhalter: {{ANREDE}}, {{ANREDE_SUFFIX}}, {{NAME}}</small>
                 </div>
 
                 <div class="form-group">
                   <label class="checkbox-label">
                     <input type="checkbox" id="template-default" name="is_default">
-                    Als Standard festlegen
+                    <span data-i18n="templates.setDefault">Als Standard festlegen</span>
                   </label>
                 </div>
 
                 <div class="button-group">
-                  <button type="button" id="delete-template-btn" class="btn btn-danger" style="display: none;">Löschen</button>
-                  <button type="submit" id="save-template-btn" class="btn btn-primary">Speichern</button>
+                  <button type="button" id="delete-template-btn" class="btn btn-danger" style="display: none;" data-i18n="templates.delete">Löschen</button>
+                  <button type="submit" id="save-template-btn" class="btn btn-primary" data-i18n="templates.save">Speichern</button>
                 </div>
               </form>
 
@@ -204,7 +221,7 @@
           <div id="modal-details" class="modal-details"></div>
         </div>
         <div class="modal-footer">
-          <button id="modal-ok-btn" class="btn btn-primary">OK</button>
+          <button id="modal-ok-btn" class="btn btn-primary" data-i18n="modal.ok">OK</button>
         </div>
       </div>
     </div>

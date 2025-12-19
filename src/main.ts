@@ -61,15 +61,22 @@ let settingsWindow: BrowserWindow | null = null;
 let templateWindow: BrowserWindow | null = null;
 
 const createWindow = () => {
-  // Create the browser window.
+  // Create the browser window (hidden initially to prevent flash)
   mainWindow = new BrowserWindow({
     width: 1000,
     height: 700,
     autoHideMenuBar: true,
+    show: false, // Don't show until ready
+    backgroundColor: '#f5f7fa', // Match app background to prevent flash
     icon: path.join(process.cwd(), 'img', 'dlogo.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
     },
+  });
+
+  // Show window when ready to prevent white flash
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show();
   });
 
   // and load the index.html of the app.
@@ -158,9 +165,12 @@ const createTemplateWindow = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
-  // Initialize database
-  initDatabase();
+  // Create window first for faster perceived startup
   createWindow();
+  // Initialize database in background (non-blocking for UI)
+  setImmediate(() => {
+    initDatabase();
+  });
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
