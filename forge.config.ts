@@ -35,6 +35,7 @@ const config: ForgeConfig = {
         'bindings',
         'file-uri-to-path',
         'pdf-parse',
+        'keytar',
       ];
 
       fs.mkdirSync(path.join(buildPath, 'node_modules'), { recursive: true });

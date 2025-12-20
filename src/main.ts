@@ -1,10 +1,11 @@
-import { app, BrowserWindow, Menu, shell, ipcMain, dialog } from 'electron';
+import { app, BrowserWindow, Menu, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import started from 'electron-squirrel-startup';
 import nodemailer from 'nodemailer';
 import Store from 'electron-store';
 import fs from 'node:fs';
-const pdfParse = require('pdf-parse');
+import keytar from 'keytar';
+import pdfParse from 'pdf-parse';
 
 // Database imports
 import { 
@@ -13,7 +14,6 @@ import {
   templateOperations, 
   emailHistoryOperations,
   userEmailOperations,
-  Template 
 } from './database';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
@@ -23,6 +23,52 @@ if (started) {
 
 // Initialize electron-store for persisting SMTP settings
 const store = new Store();
+
+type SmtpSettings = {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  password?: string;
+};
+
+const SMTP_STORE_KEY = 'smtpSettings';
+const KEYTAR_SERVICE = 'dentklarEmailer.smtp';
+const normalizeAccount = (user: unknown): string => String(user ?? '').trim().toLowerCase();
+
+async function setSmtpPassword(user: string, password: string) {
+  const account = normalizeAccount(user);
+  if (!account) throw new Error('SMTP user is required to store password');
+  await keytar.setPassword(KEYTAR_SERVICE, account, password);
+}
+
+async function getSmtpPassword(user: string): Promise<string | null> {
+  const account = normalizeAccount(user);
+  if (!account) return null;
+  return keytar.getPassword(KEYTAR_SERVICE, account);
+}
+
+async function deleteSmtpPassword(user: string): Promise<boolean> {
+  const account = normalizeAccount(user);
+  if (!account) return false;
+  return keytar.deletePassword(KEYTAR_SERVICE, account);
+}
+
+function getStoredSmtpSettings(): Omit<SmtpSettings, 'password'> {
+  const settings = store.get(SMTP_STORE_KEY, {
+    host: '',
+    port: 587,
+    secure: false,
+    user: '',
+  }) as any;
+
+  return {
+    host: String(settings.host ?? ''),
+    port: Number(settings.port ?? 587),
+    secure: Boolean(settings.secure ?? false),
+    user: String(settings.user ?? ''),
+  };
+}
 
 const isMac = process.platform === 'darwin';
 
@@ -202,7 +248,25 @@ app.on('activate', () => {
 // IPC Handlers
 ipcMain.handle('save-smtp-settings', async (_, settings) => {
   try {
-    store.set('smtpSettings', settings);
+    const nextSettings: Omit<SmtpSettings, 'password'> = {
+      host: String(settings?.host ?? ''),
+      port: Number(settings?.port ?? 587),
+      secure: Boolean(settings?.secure ?? false),
+      user: String(settings?.user ?? ''),
+    };
+
+    // If user changed, remove old stored password to avoid orphaned secrets.
+    const previous = getStoredSmtpSettings();
+    if (previous.user && normalizeAccount(previous.user) !== normalizeAccount(nextSettings.user)) {
+      await deleteSmtpPassword(previous.user);
+    }
+
+    store.set(SMTP_STORE_KEY, nextSettings);
+
+    const password = String(settings?.password ?? '');
+    if (password) {
+      await setSmtpPassword(nextSettings.user, password);
+    }
     return { success: true };
   } catch (error) {
     return { success: false, error: error.message };
@@ -211,14 +275,9 @@ ipcMain.handle('save-smtp-settings', async (_, settings) => {
 
 ipcMain.handle('get-smtp-settings', async () => {
   try {
-    const settings = store.get('smtpSettings', {
-      host: '',
-      port: 587,
-      secure: false,
-      user: '',
-      password: ''
-    });
-    return { success: true, settings };
+    const settings = getStoredSmtpSettings();
+    // Return empty password; UI should not display stored secret.
+    return { success: true, settings: { ...settings, password: '' } };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -226,13 +285,16 @@ ipcMain.handle('get-smtp-settings', async () => {
 
 ipcMain.handle('test-smtp-connection', async (_, settings) => {
   try {
+    const user = String(settings?.user ?? '');
+    const pass = String(settings?.password ?? '') || (await getSmtpPassword(user)) || '';
+
     const transporter = nodemailer.createTransport({
-      host: settings.host,
-      port: settings.port,
-      secure: settings.secure,
+      host: String(settings?.host ?? ''),
+      port: Number(settings?.port ?? 587),
+      secure: Boolean(settings?.secure ?? false),
       auth: {
-        user: settings.user,
-        pass: settings.password,
+        user,
+        pass,
       },
     });
 
@@ -248,10 +310,15 @@ ipcMain.handle('send-email', async (_, emailData) => {
   let pdfFilename: string | null = null;
 
   try {
-    const settings = store.get('smtpSettings') as any;
+    const settings = getStoredSmtpSettings();
+    const password = (await getSmtpPassword(settings.user)) ?? '';
     
     if (!settings || !settings.host) {
       throw new Error('SMTP settings not configured. Please configure in Settings.');
+    }
+
+    if (!password) {
+      throw new Error('SMTP password not set. Please enter it in Settings.');
     }
 
     const transporter = nodemailer.createTransport({
@@ -260,7 +327,7 @@ ipcMain.handle('send-email', async (_, emailData) => {
       secure: settings.secure,
       auth: {
         user: settings.user,
-        pass: settings.password,
+        pass: password,
       },
     });
 

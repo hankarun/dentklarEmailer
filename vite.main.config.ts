@@ -6,6 +6,7 @@ export default defineConfig({
   build: {
     rollupOptions: {
       external: [
+        'keytar',
         'better-sqlite3',
         'pdf-parse',
         'electron',
