@@ -730,3 +730,162 @@ textarea {
   border-bottom: 1px solid #e0e0e0;
 }
 
+/* Bulk Email Page Styles */
+.bulk-settings {
+  margin-bottom: 20px;
+}
+
+.bulk-settings-row {
+  display: flex;
+  gap: 20px;
+}
+
+.bulk-settings-row .form-group {
+  flex: 1;
+}
+
+.bulk-table-container {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 20px;
+  min-height: 200px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.bulk-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.bulk-table thead {
+  background: #f8f9fa;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.bulk-table th {
+  padding: 12px 10px;
+  text-align: left;
+  font-weight: 600;
+  color: #555;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.bulk-table td {
+  padding: 10px;
+  border-bottom: 1px solid #e9ecef;
+  vertical-align: middle;
+}
+
+.bulk-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.bulk-table .pdf-name {
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: #666;
+}
+
+.bulk-table select {
+  width: 80px;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.bulk-table input[type="text"],
+.bulk-table input[type="email"] {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 13px;
+}
+
+.bulk-table .name-input {
+  min-width: 120px;
+}
+
+.bulk-table .email-input {
+  min-width: 180px;
+}
+
+.bulk-table .status-cell {
+  white-space: nowrap;
+}
+
+.bulk-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.bulk-status.pending {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.bulk-status.sending {
+  background: #cce5ff;
+  color: #004085;
+}
+
+.bulk-status.sent {
+  background: #d4edda;
+  color: #155724;
+}
+
+.bulk-status.failed {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.bulk-table .btn-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 4px;
+  color: #dc3545;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.bulk-table .btn-remove:hover {
+  background: #f8d7da;
+}
+
+.bulk-table-container .empty-state {
+  padding: 40px;
+}
+
+.bulk-table-container:has(tbody:empty) .bulk-table {
+  display: none;
+}
+
+.bulk-table-container:has(tbody:not(:empty)) .empty-state {
+  display: none;
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+}
+
+.bulk-actions .btn {
+  width: auto;
+  min-width: 150px;
+}
+
+#bulk-page {
+  display: flex;
+  flex-direction: column;
+}
+

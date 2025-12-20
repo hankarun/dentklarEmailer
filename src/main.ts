@@ -12,6 +12,7 @@ import {
   closeDatabase, 
   templateOperations, 
   emailHistoryOperations,
+  userEmailOperations,
   Template 
 } from './database';
 
@@ -342,6 +343,23 @@ ipcMain.handle('select-pdf', async () => {
   }
 });
 
+ipcMain.handle('select-multiple-pdfs', async () => {
+  try {
+    const result = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'PDF Files', extensions: ['pdf'] }],
+    });
+
+    if (result.canceled) {
+      return { success: false };
+    }
+
+    return { success: true, filePaths: result.filePaths };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 ipcMain.handle('extract-pdf-data', async (_, filePath: string) => {
   try {
     const dataBuffer = fs.readFileSync(filePath);
@@ -582,6 +600,52 @@ ipcMain.handle('get-email-pdf', async (_, id: number) => {
       filePath: tempFilePath,
       filename: email.pdf_filename
     };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// User Email IPC Handlers
+ipcMain.handle('get-user-email-by-name', async (_, name: string) => {
+  try {
+    const userEmail = userEmailOperations.getByName(name);
+    return { success: true, userEmail };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-all-user-emails', async () => {
+  try {
+    const userEmails = userEmailOperations.getAll();
+    return { success: true, userEmails };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('save-user-email', async (_, name: string, email: string) => {
+  try {
+    const userEmail = userEmailOperations.upsert(name, email);
+    return { success: true, userEmail };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('search-user-emails', async (_, query: string) => {
+  try {
+    const userEmails = userEmailOperations.search(query);
+    return { success: true, userEmails };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('delete-user-email', async (_, id: number) => {
+  try {
+    const result = userEmailOperations.delete(id);
+    return { success: result };
   } catch (error) {
     return { success: false, error: error.message };
   }

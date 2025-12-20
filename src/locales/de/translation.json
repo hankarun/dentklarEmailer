@@ -4,6 +4,7 @@
   },
   "nav": {
     "compose": "✉️ Verfassen",
+    "bulk": "📨 Massenversand",
     "history": "📋 Bisherige E-Mails",
     "templates": "📝 Vorlagen",
     "settings": "⚙️ Einstellungen"
@@ -30,7 +31,8 @@
     "send": "E-Mail senden",
     "sending": "Senden...",
     "extracting": "Daten aus PDF extrahieren...",
-    "extracted": "Extrahiert: {{anrede}} {{name}}"
+    "extracted": "Extrahiert: {{anrede}} {{name}}",
+    "emailFound": "E-Mail-Adresse für diesen Namen gefunden"
   },
   "history": {
     "title": "📋 Bisherige E-Mails",
@@ -103,5 +105,35 @@
     "select": "Sprache",
     "de": "🇩🇪 Deutsch",
     "en": "🇬🇧 English"
+  },
+  "bulk": {
+    "title": "📨 Massenversand von E-Mails",
+    "template": "Vorlage",
+    "selectTemplate": "-- Vorlage wählen --",
+    "subject": "Betreff",
+    "subjectPlaceholder": "E-Mail-Betreff",
+    "dropMultiplePdfs": "Mehrere PDFs hier ablegen oder",
+    "browse": "durchsuchen",
+    "noFiles": "Noch keine PDF-Dateien hinzugefügt",
+    "name": "Name",
+    "anrede": "Anrede",
+    "email": "E-Mail",
+    "pdf": "PDF",
+    "vorlage": "Vorlage",
+    "status": "Status",
+    "actions": "Aktionen",
+    "remove": "Entfernen",
+    "pending": "Ausstehend",
+    "sending": "Senden...",
+    "sent": "Gesendet",
+    "failed": "Fehlgeschlagen",
+    "sendAll": "Alle E-Mails senden",
+    "sendingAll": "Senden...",
+    "clearAll": "Alle löschen",
+    "confirmClear": "Alle Einträge löschen?",
+    "missingEmail": "E-Mail fehlt",
+    "noEntries": "Keine Einträge zum Senden",
+    "allSent": "Alle E-Mails gesendet!",
+    "someFailed": "{{sent}} gesendet, {{failed}} fehlgeschlagen"
   }
 }

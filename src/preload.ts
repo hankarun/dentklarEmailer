@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // File selection
   selectPDF: () => ipcRenderer.invoke('select-pdf'),
+  selectMultiplePDFs: () => ipcRenderer.invoke('select-multiple-pdfs'),
   
   // PDF extraction
   extractPDFData: (filePath: string) => ipcRenderer.invoke('extract-pdf-data', filePath),
@@ -37,6 +38,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getEmailStats: () => ipcRenderer.invoke('get-email-stats'),
   deleteEmailHistory: (id: number) => ipcRenderer.invoke('delete-email-history', id),
   getEmailPdf: (id: number) => ipcRenderer.invoke('get-email-pdf', id),
+
+  // User email operations (store/retrieve emails by name)
+  getUserEmailByName: (name: string) => ipcRenderer.invoke('get-user-email-by-name', name),
+  getAllUserEmails: () => ipcRenderer.invoke('get-all-user-emails'),
+  saveUserEmail: (name: string, email: string) => ipcRenderer.invoke('save-user-email', name, email),
+  searchUserEmails: (query: string) => ipcRenderer.invoke('search-user-emails', query),
+  deleteUserEmail: (id: number) => ipcRenderer.invoke('delete-user-email', id),
 
   // Event listeners
   onTemplatesUpdated: (callback: () => void) => {

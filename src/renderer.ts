@@ -47,6 +47,7 @@ declare global {
       testSMTPConnection: (settings: any) => Promise<any>;
       sendEmail: (emailData: any) => Promise<any>;
       selectPDF: () => Promise<any>;
+      selectMultiplePDFs: () => Promise<{ success: boolean; filePaths?: string[]; error?: string }>;
       extractPDFData: (filePath: string) => Promise<any>;
       closeWindow: () => void;
       // Template operations
@@ -64,6 +65,12 @@ declare global {
       getEmailStats: () => Promise<any>;
       deleteEmailHistory: (id: number) => Promise<any>;
       getEmailPdf: (id: number) => Promise<{ success: boolean; filePath?: string; filename?: string; error?: string }>;
+      // User email operations
+      getUserEmailByName: (name: string) => Promise<{ success: boolean; userEmail?: { id: number; name: string; email: string }; error?: string }>;
+      getAllUserEmails: () => Promise<{ success: boolean; userEmails?: Array<{ id: number; name: string; email: string }>; error?: string }>;
+      saveUserEmail: (name: string, email: string) => Promise<{ success: boolean; userEmail?: { id: number; name: string; email: string }; error?: string }>;
+      searchUserEmails: (query: string) => Promise<{ success: boolean; userEmails?: Array<{ id: number; name: string; email: string }>; error?: string }>;
+      deleteUserEmail: (id: number) => Promise<{ success: boolean; error?: string }>;
       // Events
       onTemplatesUpdated: (callback: () => void) => () => void;
     };
@@ -79,6 +86,7 @@ initNavigation();
 
 // Initialize all pages
 initComposePage();
+initBulkPage();
 initHistoryPage();
 initSettingsPage();
 initTemplatesPage();
@@ -100,6 +108,8 @@ if (page === 'settings') {
   showPage('templates');
 } else if (page === 'history') {
   showPage('history');
+} else if (page === 'bulk') {
+  showPage('bulk');
 } else {
   showPage('compose');
 }
@@ -151,7 +161,7 @@ function showPage(pageName: string) {
   // Show selected page
   const selectedPage = document.getElementById(`${pageName}-page`);
   if (selectedPage) {
-    selectedPage.style.display = 'block';
+    selectedPage.style.display = 'flex';
   }
   
   // Add active class to nav link
@@ -180,6 +190,7 @@ function initComposePage() {
   const statusMessage = document.getElementById('status-message') as HTMLDivElement;
   const sendBtn = document.getElementById('send-btn') as HTMLButtonElement;
   const nameInput = document.getElementById('name') as HTMLInputElement;
+  const emailInput = document.getElementById('email') as HTMLInputElement;
   const anredeSelect = document.getElementById('anrede') as HTMLSelectElement;
   const messageTextarea = document.getElementById('message') as HTMLTextAreaElement;
   const templateSelect = document.getElementById('template-select') as HTMLSelectElement;
@@ -188,6 +199,7 @@ function initComposePage() {
   let selectedFile: string | null = null;
   let selectedTemplateId: number | null = null;
   let templates: Template[] = [];
+  let emailLookupDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Load templates on page load
   loadTemplates();
@@ -200,7 +212,22 @@ function initComposePage() {
   // Listen for page navigation refresh
   window.addEventListener('refresh-compose-templates', () => {
     loadTemplates();
+    // Check if name field has value and look up email
+    lookupEmailForCurrentName();
   });
+
+  // Function to look up email for current name value
+  async function lookupEmailForCurrentName() {
+    const name = nameInput.value.trim();
+    if (name.length > 0 && !emailInput.value.trim()) {
+      const result = await window.electronAPI.getUserEmailByName(name);
+      if (result.success && result.userEmail && result.userEmail.email) {
+        emailInput.value = result.userEmail.email;
+        emailInput.dataset.autoFilled = 'true';
+        showStatus(t('compose.emailFound') || `Email found for ${name}`, 'success');
+      }
+    }
+  }
 
   // Listen for repeat email event from history page
   window.addEventListener('repeat-email', (async (e: CustomEvent) => {
@@ -324,6 +351,31 @@ function initComposePage() {
         applyTemplate(template, anredeSelect.value, nameInput.value);
       }
     }
+    
+    // Look up saved email for this name (debounced)
+    if (emailLookupDebounceTimer) {
+      clearTimeout(emailLookupDebounceTimer);
+    }
+    emailLookupDebounceTimer = setTimeout(async () => {
+      const name = nameInput.value.trim();
+      if (name.length > 0) {
+        const result = await window.electronAPI.getUserEmailByName(name);
+        if (result.success && result.userEmail && result.userEmail.email) {
+          // Only auto-fill if email field is empty or was auto-filled before
+          const currentEmail = emailInput.value.trim();
+          if (!currentEmail || emailInput.dataset.autoFilled === 'true') {
+            emailInput.value = result.userEmail.email;
+            emailInput.dataset.autoFilled = 'true';
+            showStatus(t('compose.emailFound') || `Email found for ${name}`, 'success');
+          }
+        }
+      }
+    }, 300);
+  });
+  
+  // Clear auto-filled flag when user manually edits email
+  emailInput?.addEventListener('input', () => {
+    emailInput.dataset.autoFilled = 'false';
   });
 
   // Helper function to handle PDF selection and extraction
@@ -349,6 +401,13 @@ function initComposePage() {
           nameInput.value = extractResult.data.name;
           const anredeText = extractResult.data.anrede ? `${extractResult.data.anrede} ` : '';
           showStatus(t('compose.extracted', { anrede: anredeText, name: extractResult.data.name }), 'success');
+          
+          // Look up saved email for this name
+          const emailResult = await window.electronAPI.getUserEmailByName(extractResult.data.name);
+          if (emailResult.success && emailResult.userEmail && emailResult.userEmail.email) {
+            emailInput.value = emailResult.userEmail.email;
+            emailInput.dataset.autoFilled = 'true';
+          }
         }
         
         // Apply current template with extracted data
@@ -432,6 +491,11 @@ function initComposePage() {
       });
 
       if (result.success) {
+        // Save user email for future use
+        if (name && email) {
+          await window.electronAPI.saveUserEmail(name, email);
+        }
+        
         const details = `
           <div class="detail-row"><span class="detail-label">${t('modal.recipient')}:</span> ${name} &lt;${email}&gt;</div>
           <div class="detail-row"><span class="detail-label">${t('modal.subject')}:</span> ${subject || t('history.noSubject')}</div>
@@ -455,6 +519,369 @@ function initComposePage() {
   });
 
   function showStatus(message: string, type: 'success' | 'error') {
+    statusMessage.textContent = message;
+    statusMessage.className = `status-message ${type}`;
+    
+    setTimeout(() => {
+      statusMessage.className = 'status-message';
+    }, 5000);
+  }
+}
+
+// Bulk Email Page
+interface BulkEmailEntry {
+  id: string;
+  filePath: string;
+  fileName: string;
+  anrede: string;
+  name: string;
+  email: string;
+  templateId: number | null;
+  status: 'pending' | 'sending' | 'sent' | 'failed';
+  errorMessage?: string;
+}
+
+function initBulkPage() {
+  const dropZone = document.getElementById('bulk-drop-zone') as HTMLDivElement;
+  const browseBtnSpan = document.getElementById('bulk-browse-btn') as HTMLSpanElement;
+  const fileInput = document.getElementById('bulk-file-input') as HTMLInputElement;
+  const tableBody = document.getElementById('bulk-table-body') as HTMLTableSectionElement;
+  const templateSelect = document.getElementById('bulk-template-select') as HTMLSelectElement;
+  const subjectInput = document.getElementById('bulk-subject') as HTMLInputElement;
+  const sendAllBtn = document.getElementById('bulk-send-btn') as HTMLButtonElement;
+  const clearAllBtn = document.getElementById('bulk-clear-btn') as HTMLButtonElement;
+  const statusMessage = document.getElementById('bulk-status-message') as HTMLDivElement;
+
+  let entries: BulkEmailEntry[] = [];
+  let templates: Template[] = [];
+  let selectedTemplateId: number | null = null;
+
+  // Load templates on init
+  loadTemplates();
+
+  // Listen for template updates
+  window.electronAPI.onTemplatesUpdated(() => {
+    loadTemplates();
+  });
+
+  async function loadTemplates() {
+    try {
+      const result = await window.electronAPI.getTemplates();
+      if (result.success && result.templates) {
+        templates = result.templates;
+        populateTemplateSelect();
+        
+        // Select default template if nothing selected yet
+        const defaultTemplate = templates.find(t => t.is_default);
+        if (defaultTemplate && !selectedTemplateId) {
+          templateSelect.value = String(defaultTemplate.id);
+          selectedTemplateId = defaultTemplate.id;
+          subjectInput.value = defaultTemplate.subject || '';
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load templates:', error);
+    }
+  }
+
+  function populateTemplateSelect() {
+    templateSelect.innerHTML = `<option value="">${t('bulk.selectTemplate')}</option>`;
+    
+    templates.forEach(template => {
+      const option = document.createElement('option');
+      option.value = String(template.id);
+      option.textContent = template.name + (template.is_default ? ' ★' : '');
+      templateSelect.appendChild(option);
+    });
+
+    if (selectedTemplateId) {
+      templateSelect.value = String(selectedTemplateId);
+    }
+  }
+
+  templateSelect?.addEventListener('change', () => {
+    const templateId = parseInt(templateSelect.value);
+    selectedTemplateId = templateId || null;
+    
+    if (templateId) {
+      const template = templates.find(t => t.id === templateId);
+      if (template) {
+        subjectInput.value = template.subject || '';
+      }
+      
+      // Update all pending entries to use this template
+      entries.forEach(entry => {
+        if (entry.status === 'pending') {
+          entry.templateId = templateId;
+        }
+      });
+      renderTable();
+    }
+  });
+
+  // Drag and drop handlers
+  dropZone?.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('drag-over');
+  });
+
+  dropZone?.addEventListener('dragleave', () => {
+    dropZone.classList.remove('drag-over');
+  });
+
+  dropZone?.addEventListener('drop', async (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('drag-over');
+    await handleMultiplePDFSelection();
+  });
+
+  browseBtnSpan?.addEventListener('click', async () => {
+    await handleMultiplePDFSelection();
+  });
+
+  dropZone?.addEventListener('click', async (e) => {
+    if (e.target !== browseBtnSpan) {
+      await handleMultiplePDFSelection();
+    }
+  });
+
+  async function handleMultiplePDFSelection() {
+    const result = await window.electronAPI.selectMultiplePDFs();
+    if (result.success && result.filePaths) {
+      for (const filePath of result.filePaths) {
+        await addPDFEntry(filePath);
+      }
+    }
+  }
+
+  async function addPDFEntry(filePath: string) {
+    // Check if already exists
+    if (entries.some(e => e.filePath === filePath)) {
+      return;
+    }
+
+    const fileName = filePath.split('/').pop() || filePath.split('\\').pop() || filePath;
+    
+    const entry: BulkEmailEntry = {
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      filePath,
+      fileName,
+      anrede: '',
+      name: '',
+      email: '',
+      templateId: selectedTemplateId,
+      status: 'pending'
+    };
+
+    // Try to extract data from PDF
+    const extractResult = await window.electronAPI.extractPDFData(filePath);
+    if (extractResult.success && extractResult.data) {
+      entry.anrede = extractResult.data.anrede || '';
+      entry.name = extractResult.data.name || '';
+      
+      // Look up saved email for this name
+      if (entry.name) {
+        const emailResult = await window.electronAPI.getUserEmailByName(entry.name);
+        if (emailResult.success && emailResult.userEmail && emailResult.userEmail.email) {
+          entry.email = emailResult.userEmail.email;
+        }
+      }
+    }
+
+    entries.push(entry);
+    renderTable();
+  }
+
+  function renderTable() {
+    tableBody.innerHTML = '';
+    
+    entries.forEach(entry => {
+      const tr = document.createElement('tr');
+      tr.dataset.id = entry.id;
+      
+      // Build template options
+      let templateOptions = `<option value="">${t('bulk.selectTemplate')}</option>`;
+      templates.forEach(template => {
+        const isSelected = entry.templateId === template.id;
+        templateOptions += `<option value="${template.id}" ${isSelected ? 'selected' : ''}>${template.name}${template.is_default ? ' ★' : ''}</option>`;
+      });
+      
+      // Extract just the filename from the path
+      const displayFileName = entry.fileName.split('/').pop()?.split('\\').pop() || entry.fileName;
+      
+      tr.innerHTML = `
+        <td><span class="pdf-name" title="${entry.filePath}">📄 ${displayFileName}</span></td>
+        <td>
+          <select class="anrede-select" ${entry.status !== 'pending' ? 'disabled' : ''}>
+            <option value="">--</option>
+            <option value="Herr" ${entry.anrede === 'Herr' ? 'selected' : ''}>${t('compose.herr')}</option>
+            <option value="Frau" ${entry.anrede === 'Frau' ? 'selected' : ''}>${t('compose.frau')}</option>
+          </select>
+        </td>
+        <td>
+          <input type="text" class="name-input" value="${entry.name}" placeholder="${t('bulk.name')}" ${entry.status !== 'pending' ? 'disabled' : ''}>
+        </td>
+        <td>
+          <input type="email" class="email-input" value="${entry.email}" placeholder="${t('bulk.email')}" ${entry.status !== 'pending' ? 'disabled' : ''}>
+        </td>
+        <td>
+          <select class="template-select" ${entry.status !== 'pending' ? 'disabled' : ''}>
+            ${templateOptions}
+          </select>
+        </td>
+        <td class="status-cell">
+          <span class="bulk-status ${entry.status}">${getStatusText(entry.status)}</span>
+          ${entry.errorMessage ? `<span title="${entry.errorMessage}">⚠️</span>` : ''}
+        </td>
+        <td>
+          <button class="btn-remove" title="${t('bulk.remove')}" ${entry.status === 'sending' ? 'disabled' : ''}>🗑️</button>
+        </td>
+      `;
+
+      // Add event listeners
+      const anredeSelect = tr.querySelector('.anrede-select') as HTMLSelectElement;
+      const nameInput = tr.querySelector('.name-input') as HTMLInputElement;
+      const emailInput = tr.querySelector('.email-input') as HTMLInputElement;
+      const entryTemplateSelect = tr.querySelector('.template-select') as HTMLSelectElement;
+      const removeBtn = tr.querySelector('.btn-remove') as HTMLButtonElement;
+
+      anredeSelect?.addEventListener('change', () => {
+        entry.anrede = anredeSelect.value;
+      });
+
+      nameInput?.addEventListener('input', () => {
+        entry.name = nameInput.value;
+      });
+
+      emailInput?.addEventListener('input', () => {
+        entry.email = emailInput.value;
+      });
+
+      entryTemplateSelect?.addEventListener('change', () => {
+        entry.templateId = parseInt(entryTemplateSelect.value) || null;
+      });
+
+      removeBtn?.addEventListener('click', () => {
+        entries = entries.filter(e => e.id !== entry.id);
+        renderTable();
+      });
+
+      tableBody.appendChild(tr);
+    });
+  }
+
+  function getStatusText(status: string): string {
+    switch (status) {
+      case 'pending': return t('bulk.pending');
+      case 'sending': return t('bulk.sending');
+      case 'sent': return t('bulk.sent');
+      case 'failed': return t('bulk.failed');
+      default: return status;
+    }
+  }
+
+  function getTemplateMessage(anrede: string, name: string, templateId: number | null): { message: string; subject: string } {
+    if (!templateId) return { message: '', subject: '' };
+    
+    const template = templates.find(t => t.id === templateId);
+    if (!template) return { message: '', subject: '' };
+
+    let message = template.body;
+    const suffix = anrede === 'Herr' ? 'r' : '';
+    
+    message = message.replace(/\{\{ANREDE_SUFFIX\}\}/g, suffix);
+    message = message.replace(/\{\{ANREDE\}\}/g, anrede || '');
+    message = message.replace(/\{\{NAME\}\}/g, name || '');
+    
+    return { message, subject: template.subject || '' };
+  }
+
+  clearAllBtn?.addEventListener('click', () => {
+    if (entries.length === 0) return;
+    if (!confirm(t('bulk.confirmClear'))) return;
+    
+    entries = [];
+    renderTable();
+  });
+
+  sendAllBtn?.addEventListener('click', async () => {
+    // Validate entries
+    const pendingEntries = entries.filter(e => e.status === 'pending');
+    
+    if (pendingEntries.length === 0) {
+      showBulkStatus(t('bulk.noEntries'), 'error');
+      return;
+    }
+
+    // Check for missing emails
+    const missingEmail = pendingEntries.find(e => !e.email);
+    if (missingEmail) {
+      showBulkStatus(`${t('bulk.missingEmail')}: ${missingEmail.fileName}`, 'error');
+      return;
+    }
+
+    // Check for missing templates
+    const missingTemplate = pendingEntries.find(e => !e.templateId);
+    if (missingTemplate) {
+      showBulkStatus(`${t('bulk.selectTemplate')}: ${missingTemplate.fileName}`, 'error');
+      return;
+    }
+
+    sendAllBtn.disabled = true;
+    sendAllBtn.textContent = t('bulk.sendingAll');
+
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const entry of pendingEntries) {
+      entry.status = 'sending';
+      renderTable();
+
+      try {
+        const { message, subject } = getTemplateMessage(entry.anrede, entry.name, entry.templateId);
+        const result = await window.electronAPI.sendEmail({
+          name: entry.name,
+          email: entry.email,
+          recipientEmail: entry.email,
+          message: message,
+          subject: subject || subjectInput.value || undefined,
+          pdfPath: entry.filePath,
+          templateId: entry.templateId,
+        });
+
+        if (result.success) {
+          entry.status = 'sent';
+          sentCount++;
+          
+          // Save user email for future use
+          if (entry.name && entry.email) {
+            await window.electronAPI.saveUserEmail(entry.name, entry.email);
+          }
+        } else {
+          entry.status = 'failed';
+          entry.errorMessage = result.error;
+          failedCount++;
+        }
+      } catch (error) {
+        entry.status = 'failed';
+        entry.errorMessage = (error as Error).message;
+        failedCount++;
+      }
+
+      renderTable();
+    }
+
+    sendAllBtn.disabled = false;
+    sendAllBtn.textContent = t('bulk.sendAll');
+
+    if (failedCount === 0) {
+      showBulkStatus(t('bulk.allSent'), 'success');
+    } else {
+      showBulkStatus(t('bulk.someFailed', { sent: sentCount, failed: failedCount }), 'error');
+    }
+  });
+
+  function showBulkStatus(message: string, type: 'success' | 'error') {
     statusMessage.textContent = message;
     statusMessage.className = `status-message ${type}`;
     

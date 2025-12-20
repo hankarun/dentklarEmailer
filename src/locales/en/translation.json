@@ -4,6 +4,7 @@
   },
   "nav": {
     "compose": "✉️ Compose",
+    "bulk": "📨 Bulk Send",
     "history": "📋 Previous Emails",
     "templates": "📝 Templates",
     "settings": "⚙️ Settings"
@@ -30,7 +31,8 @@
     "send": "Send Email",
     "sending": "Sending...",
     "extracting": "Extracting data from PDF...",
-    "extracted": "Extracted: {{anrede}} {{name}}"
+    "extracted": "Extracted: {{anrede}} {{name}}",
+    "emailFound": "Email address found for this name"
   },
   "history": {
     "title": "📋 Previous Emails",
@@ -103,5 +105,35 @@
     "select": "Language",
     "de": "🇩🇪 Deutsch",
     "en": "🇬🇧 English"
+  },
+  "bulk": {
+    "title": "📨 Bulk Send Emails",
+    "template": "Template",
+    "selectTemplate": "-- Select Template --",
+    "subject": "Subject",
+    "subjectPlaceholder": "Email subject",
+    "dropMultiplePdfs": "Drop multiple PDFs here or",
+    "browse": "browse",
+    "noFiles": "No PDF files added yet",
+    "name": "Name",
+    "anrede": "Salutation",
+    "email": "Email",
+    "pdf": "PDF",
+    "vorlage": "Template",
+    "status": "Status",
+    "actions": "Actions",
+    "remove": "Remove",
+    "pending": "Pending",
+    "sending": "Sending...",
+    "sent": "Sent",
+    "failed": "Failed",
+    "sendAll": "Send All Emails",
+    "sendingAll": "Sending...",
+    "clearAll": "Clear All",
+    "confirmClear": "Clear all entries?",
+    "missingEmail": "Missing email",
+    "noEntries": "No entries to send",
+    "allSent": "All emails sent!",
+    "someFailed": "{{sent}} sent, {{failed}} failed"
   }
 }

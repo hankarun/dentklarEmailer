@@ -30,6 +30,14 @@ export interface EmailHistory {
   sent_at?: string;
 }
 
+export interface UserEmail {
+  id?: number;
+  name: string;
+  email: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 let db: BetterSqlite3.Database | null = null;
 
 // Get database path in user data directory
@@ -85,9 +93,19 @@ export function initDatabase(): BetterSqlite3.Database {
       FOREIGN KEY (template_id) REFERENCES templates(id) ON DELETE SET NULL
     );
 
+    -- User emails table (stores email addresses by name for reuse)
+    CREATE TABLE IF NOT EXISTS user_emails (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+      email TEXT NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Create index for faster queries
     CREATE INDEX IF NOT EXISTS idx_email_history_sent_at ON email_history(sent_at);
     CREATE INDEX IF NOT EXISTS idx_templates_is_default ON templates(is_default);
+    CREATE INDEX IF NOT EXISTS idx_user_emails_name ON user_emails(name);
   `);
 
   // Insert default template if no templates exist
@@ -266,6 +284,59 @@ export const emailHistoryOperations = {
   delete(id: number): boolean {
     const database = getDatabase();
     const result = database.prepare('DELETE FROM email_history WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
+};
+
+// User email operations (for storing and retrieving emails by name)
+export const userEmailOperations = {
+  getByName(name: string): UserEmail | undefined {
+    const database = getDatabase();
+    return database.prepare('SELECT * FROM user_emails WHERE name = ? COLLATE NOCASE').get(name) as UserEmail | undefined;
+  },
+
+  getAll(): UserEmail[] {
+    const database = getDatabase();
+    return database.prepare('SELECT * FROM user_emails ORDER BY name ASC').all() as UserEmail[];
+  },
+
+  upsert(name: string, email: string): UserEmail {
+    const database = getDatabase();
+    
+    // Try to update first
+    const updateResult = database.prepare(`
+      UPDATE user_emails 
+      SET email = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE name = ? COLLATE NOCASE
+    `).run(email, name);
+
+    if (updateResult.changes === 0) {
+      // Insert new entry
+      const insertResult = database.prepare(`
+        INSERT INTO user_emails (name, email)
+        VALUES (?, ?)
+      `).run(name, email);
+      
+      return database.prepare('SELECT * FROM user_emails WHERE id = ?').get(insertResult.lastInsertRowid) as UserEmail;
+    }
+
+    return this.getByName(name)!;
+  },
+
+  search(query: string, limit: number = 10): UserEmail[] {
+    const database = getDatabase();
+    const searchPattern = `%${query}%`;
+    return database.prepare(`
+      SELECT * FROM user_emails 
+      WHERE name LIKE ? COLLATE NOCASE
+      ORDER BY name ASC 
+      LIMIT ?
+    `).all(searchPattern, limit) as UserEmail[];
+  },
+
+  delete(id: number): boolean {
+    const database = getDatabase();
+    const result = database.prepare('DELETE FROM user_emails WHERE id = ?').run(id);
     return result.changes > 0;
   }
 };
