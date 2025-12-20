@@ -589,8 +589,17 @@ ipcMain.handle('get-email-history', async (_, limit?: number, offset?: number) =
   }
 });
 
+// NOTE: Sending emails already writes to history in `send-email`.
+// This endpoint is intentionally limited to manual/imported history entries to avoid duplicates.
 ipcMain.handle('save-email-history', async (_, emailData) => {
   try {
+    if (emailData?.source !== 'import') {
+      return {
+        success: false,
+        error: "Direct history saves are disabled. Use 'send-email' (automatic history) or provide { source: 'import' }.",
+      };
+    }
+
     // Read PDF data if path is provided
     let pdfData: Buffer | null = null;
     let pdfFilename: string | null = null;
