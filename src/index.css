@@ -95,22 +95,44 @@ body {
   font-size: 22px;
 }
 
-/* Compose page form should fill available space */
-#compose-page #email-form {
+/* Compose page layout with fixed footer */
+#compose-page {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.compose-scrollable {
   flex: 1;
+  overflow-y: auto;
+  padding-right: 10px;
+  margin-right: -10px;
+}
+
+.compose-scrollable #email-form {
   display: flex;
   flex-direction: column;
 }
 
-#compose-page #email-form .form-group:nth-last-child(2) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-#compose-page #email-form textarea {
-  flex: 1;
+.compose-scrollable #email-form textarea {
   min-height: 150px;
+}
+
+.compose-footer {
+  flex-shrink: 0;
+  padding-top: 20px;
+  border-top: 1px solid #e0e0e0;
+  margin-top: 20px;
+  background: white;
+}
+
+.compose-footer .status-message {
+  margin-top: 0;
+  margin-bottom: 15px;
+}
+
+.compose-footer .btn-primary {
+  width: 100%;
 }
 
 /* History page should fill space */

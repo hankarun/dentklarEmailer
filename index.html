@@ -26,56 +26,59 @@
         <div id="compose-page" class="page">
           <h2 data-i18n="compose.title">✉️ E-Mail verfassen</h2>
           
-          <form id="email-form">
-            <div class="form-group">
-              <label for="template-select" data-i18n="compose.template">Vorlage:</label>
-              <select id="template-select" name="template">
-                <option value="" data-i18n="compose.selectTemplate">-- Vorlage wählen --</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="anrede" data-i18n="compose.anrede">Anrede:</label>
-              <select id="anrede" name="anrede">
-                <option value="" data-i18n="compose.selectAnrede">-- Bitte wählen --</option>
-                <option value="Herr" data-i18n="compose.herr">Herr</option>
-                <option value="Frau" data-i18n="compose.frau">Frau</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="name" data-i18n="compose.name">Name:</label>
-              <input type="text" id="name" name="name" required data-i18n-placeholder="compose.namePlaceholder" placeholder="Empfängername">
-            </div>
-
-            <div class="form-group">
-              <label for="email" data-i18n="compose.email">E-Mail:</label>
-              <input type="email" id="email" name="email" required data-i18n-placeholder="compose.emailPlaceholder" placeholder="empfaenger@example.com">
-            </div>
-
-            <div class="form-group">
-              <label for="subject" data-i18n="compose.subject">Betreff:</label>
-              <input type="text" id="subject" name="subject" data-i18n-placeholder="compose.subjectPlaceholder" placeholder="E-Mail-Betreff">
-            </div>
-
-            <div class="form-group">
-              <label for="message" data-i18n="compose.message">Nachricht:</label>
-              <textarea id="message" name="message" rows="8" required data-i18n-placeholder="compose.messagePlaceholder" placeholder="Nachricht eingeben..."></textarea>
-            </div>
-
-            <div class="form-group">
-              <label data-i18n="compose.pdfAttachment">PDF Anhang:</label>
-              <div id="drop-zone" class="drop-zone">
-                <p class="drop-text"><span data-i18n="compose.dropPdf">PDF hier ablegen oder</span> <span id="browse-btn" class="browse-link" data-i18n="compose.browse">durchsuchen</span></p>
-                <p id="file-name" class="file-name"></p>
+          <div class="compose-scrollable">
+            <form id="email-form">
+              <div class="form-group">
+                <label data-i18n="compose.pdfAttachment">PDF Anhang:</label>
+                <div id="drop-zone" class="drop-zone">
+                  <p class="drop-text"><span data-i18n="compose.dropPdf">PDF hier ablegen oder</span> <span id="browse-btn" class="browse-link" data-i18n="compose.browse">durchsuchen</span></p>
+                  <p id="file-name" class="file-name"></p>
+                </div>
+                <input type="file" id="file-input" accept=".pdf" style="display: none;">
               </div>
-              <input type="file" id="file-input" accept=".pdf" style="display: none;">
-            </div>
 
-            <button type="submit" id="send-btn" class="btn btn-primary" data-i18n="compose.send">E-Mail senden</button>
-          </form>
+              <div class="form-group">
+                <label for="template-select" data-i18n="compose.template">Vorlage:</label>
+                <select id="template-select" name="template">
+                  <option value="" data-i18n="compose.selectTemplate">-- Vorlage wählen --</option>
+                </select>
+              </div>
 
-          <div id="status-message" class="status-message"></div>
+              <div class="form-group">
+                <label for="anrede" data-i18n="compose.anrede">Anrede:</label>
+                <select id="anrede" name="anrede">
+                  <option value="" data-i18n="compose.selectAnrede">-- Bitte wählen --</option>
+                  <option value="Herr" data-i18n="compose.herr">Herr</option>
+                  <option value="Frau" data-i18n="compose.frau">Frau</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="name" data-i18n="compose.name">Name:</label>
+                <input type="text" id="name" name="name" required data-i18n-placeholder="compose.namePlaceholder" placeholder="Empfängername">
+              </div>
+
+              <div class="form-group">
+                <label for="email" data-i18n="compose.email">E-Mail:</label>
+                <input type="email" id="email" name="email" required data-i18n-placeholder="compose.emailPlaceholder" placeholder="empfaenger@example.com">
+              </div>
+
+              <div class="form-group">
+                <label for="subject" data-i18n="compose.subject">Betreff:</label>
+                <input type="text" id="subject" name="subject" data-i18n-placeholder="compose.subjectPlaceholder" placeholder="E-Mail-Betreff">
+              </div>
+
+              <div class="form-group">
+                <label for="message" data-i18n="compose.message">Nachricht:</label>
+                <textarea id="message" name="message" rows="8" required data-i18n-placeholder="compose.messagePlaceholder" placeholder="Nachricht eingeben..."></textarea>
+              </div>
+            </form>
+          </div>
+
+          <div class="compose-footer">
+            <div id="status-message" class="status-message"></div>
+            <button type="submit" form="email-form" id="send-btn" class="btn btn-primary" data-i18n="compose.send">E-Mail senden</button>
+          </div>
         </div>
 
         <!-- Bulk Email Page -->
