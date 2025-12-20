@@ -257,11 +257,13 @@ textarea {
   display: flex;
   gap: 15px;
   margin-top: 20px;
+  justify-content: flex-end;
 }
 
-.button-group .btn-primary {
-  flex: 1;
+.button-group .btn {
+  flex: none;
   width: auto;
+  min-width: 120px;
 }
 
 .status-message {
@@ -882,6 +884,7 @@ textarea {
 .bulk-actions .btn {
   width: auto;
   min-width: 150px;
+  flex: none;
 }
 
 #bulk-page {

@@ -518,15 +518,13 @@ function initBulkPage() {
   const browseBtnSpan = document.getElementById('bulk-browse-btn') as HTMLSpanElement;
   const fileInput = document.getElementById('bulk-file-input') as HTMLInputElement;
   const tableBody = document.getElementById('bulk-table-body') as HTMLTableSectionElement;
-  const templateSelect = document.getElementById('bulk-template-select') as HTMLSelectElement;
-  const subjectInput = document.getElementById('bulk-subject') as HTMLInputElement;
   const sendAllBtn = document.getElementById('bulk-send-btn') as HTMLButtonElement;
   const clearAllBtn = document.getElementById('bulk-clear-btn') as HTMLButtonElement;
   const statusMessage = document.getElementById('bulk-status-message') as HTMLDivElement;
 
   let entries: BulkEmailEntry[] = [];
   let templates: Template[] = [];
-  let selectedTemplateId: number | null = null;
+  let defaultTemplateId: number | null = null;
 
   // Load templates on init
   loadTemplates();
@@ -541,55 +539,17 @@ function initBulkPage() {
       const result = await window.electronAPI.getTemplates();
       if (result.success && result.templates) {
         templates = result.templates;
-        populateTemplateSelect();
         
-        // Select default template if nothing selected yet
+        // Find default template
         const defaultTemplate = templates.find(t => t.is_default);
-        if (defaultTemplate && !selectedTemplateId) {
-          templateSelect.value = String(defaultTemplate.id);
-          selectedTemplateId = defaultTemplate.id;
-          subjectInput.value = defaultTemplate.subject || '';
+        if (defaultTemplate) {
+          defaultTemplateId = defaultTemplate.id;
         }
       }
     } catch (error) {
       console.error('Failed to load templates:', error);
     }
   }
-
-  function populateTemplateSelect() {
-    templateSelect.innerHTML = `<option value="">${t('bulk.selectTemplate')}</option>`;
-    
-    templates.forEach(template => {
-      const option = document.createElement('option');
-      option.value = String(template.id);
-      option.textContent = template.name + (template.is_default ? ' ★' : '');
-      templateSelect.appendChild(option);
-    });
-
-    if (selectedTemplateId) {
-      templateSelect.value = String(selectedTemplateId);
-    }
-  }
-
-  templateSelect?.addEventListener('change', () => {
-    const templateId = parseInt(templateSelect.value);
-    selectedTemplateId = templateId || null;
-    
-    if (templateId) {
-      const template = templates.find(t => t.id === templateId);
-      if (template) {
-        subjectInput.value = template.subject || '';
-      }
-      
-      // Update all pending entries to use this template
-      entries.forEach(entry => {
-        if (entry.status === 'pending') {
-          entry.templateId = templateId;
-        }
-      });
-      renderTable();
-    }
-  });
 
   // Drag and drop handlers
   dropZone?.addEventListener('dragover', (e) => {
@@ -641,7 +601,7 @@ function initBulkPage() {
       anrede: '',
       name: '',
       email: '',
-      templateId: selectedTemplateId,
+      templateId: defaultTemplateId,
       status: 'pending'
     };
 
@@ -816,7 +776,7 @@ function initBulkPage() {
           email: entry.email,
           recipientEmail: entry.email,
           message: message,
-          subject: subject || subjectInput.value || undefined,
+          subject: subject || undefined,
           pdfPath: entry.filePath,
           templateId: entry.templateId,
         });
