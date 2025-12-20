@@ -809,7 +809,7 @@ textarea {
 }
 
 .bulk-table .pdf-name {
-  max-width: 150px;
+  max-width: 100px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -821,6 +821,10 @@ textarea {
   width: 80px;
   padding: 6px 8px;
   font-size: 13px;
+}
+
+.bulk-table select.template-select {
+  width: 150px;
 }
 
 .bulk-table input[type="text"],
