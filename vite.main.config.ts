@@ -10,6 +10,7 @@ export default defineConfig({
         'better-sqlite3',
         'pdf-parse',
         'electron',
+        'i18next',
         ...builtinModules,
         ...builtinModules.map((m) => `node:${m}`),
       ],

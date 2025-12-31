@@ -36,6 +36,7 @@ const config: ForgeConfig = {
         'file-uri-to-path',
         'pdf-parse',
         'keytar',
+        'i18next',
       ];
 
       fs.mkdirSync(path.join(buildPath, 'node_modules'), { recursive: true });
