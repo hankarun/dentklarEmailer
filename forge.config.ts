@@ -7,6 +7,7 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-natives';
+import { PublisherGithub } from '@electron-forge/publisher-github';
 import path from 'path';
 import fs from 'fs';
 
@@ -18,6 +19,16 @@ const config: ForgeConfig = {
     icon: './img/dlogo',
   },
   rebuildConfig: {},
+  publishers: [
+    new PublisherGithub({
+      repository: {
+        owner: 'hankarun',
+        name: 'dentklarEmailer',
+      },
+      prerelease: false,
+      draft: true,
+    }),
+  ],
   makers: [
     new MakerSquirrel({
       name: 'DentKlarEmailer',

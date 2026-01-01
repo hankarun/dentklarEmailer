@@ -6,6 +6,7 @@ import Store from 'electron-store';
 import fs from 'node:fs';
 import keytar from 'keytar';
 import pdfParse from 'pdf-parse';
+import { autoUpdater } from 'electron-updater';
 
 // Database imports
 import { 
@@ -218,6 +219,20 @@ app.on('ready', () => {
   setImmediate(() => {
     initDatabase();
   });
+
+  // Auto-updater: only check for updates in packaged app
+  if (app.isPackaged) {
+    autoUpdater.autoDownload = true;
+    autoUpdater.checkForUpdatesAndNotify();
+
+    autoUpdater.on('update-available', () => {
+      mainWindow?.webContents.send('update-available');
+    });
+
+    autoUpdater.on('update-downloaded', () => {
+      mainWindow?.webContents.send('update-downloaded');
+    });
+  }
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common
@@ -725,4 +740,16 @@ ipcMain.handle('delete-user-email', async (_, id: number) => {
   } catch (error) {
     return { success: false, error: error.message };
   }
+});
+
+// Auto-update IPC Handlers
+ipcMain.handle('check-for-updates', async () => {
+  if (app.isPackaged) {
+    return autoUpdater.checkForUpdatesAndNotify();
+  }
+  return null;
+});
+
+ipcMain.handle('quit-and-install', () => {
+  autoUpdater.quitAndInstall();
 });
