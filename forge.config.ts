@@ -120,18 +120,22 @@ const config: ForgeConfig = {
           const setupExe = result.artifacts.find(a => a.endsWith('.exe') && a.includes('Setup'));
           
           if (setupExe) {
-            const fileName = path.basename(setupExe);
+            // Get filename and fix space issue (use dot instead of space before "Setup")
+            let fileName = path.basename(setupExe);
+            // Ensure URL-safe filename (replace space with dot if present)
+            const urlFileName = fileName.replace(' Setup.exe', '.Setup.exe');
+            
             const fileSize = fs.statSync(setupExe).size;
             const sha512 = calculateSha512(setupExe);
             
             const latestYml = {
               version: packageJson.version,
               files: [{
-                url: fileName,
+                url: urlFileName,
                 sha512: sha512,
                 size: fileSize,
               }],
-              path: fileName,
+              path: urlFileName,
               sha512: sha512,
               releaseDate: new Date().toISOString(),
             };
@@ -139,6 +143,20 @@ const config: ForgeConfig = {
             const latestYmlPath = path.join(outDir, 'latest.yml');
             fs.writeFileSync(latestYmlPath, yaml.dump(latestYml), 'utf-8');
             console.log('[Forge Hook] Created latest.yml at:', latestYmlPath);
+            console.log('[Forge Hook] Setup exe URL:', urlFileName);
+            
+            // Rename the setup exe if it has a space in the name
+            if (fileName !== urlFileName) {
+              const oldPath = setupExe;
+              const newPath = path.join(path.dirname(setupExe), urlFileName);
+              fs.renameSync(oldPath, newPath);
+              // Update the artifact path
+              const artifactIndex = result.artifacts.indexOf(setupExe);
+              if (artifactIndex !== -1) {
+                result.artifacts[artifactIndex] = newPath;
+              }
+              console.log('[Forge Hook] Renamed setup exe to:', urlFileName);
+            }
             
             // Add latest.yml to artifacts so it gets published
             result.artifacts.push(latestYmlPath);

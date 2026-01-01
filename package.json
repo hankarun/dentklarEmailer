@@ -1,7 +1,7 @@
 {
   "name": "DentKlar",
   "productName": "DentKlar",
-  "version": "1.0.3-alpha",
+  "version": "1.0.2-alpha",
   "description": "DentKlar auto email generator",
   "main": ".vite/build/main.js",
   "scripts": {
