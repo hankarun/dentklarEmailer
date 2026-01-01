@@ -15,7 +15,16 @@
     "version": "Version:",
     "developer": "Developer:",
     "contact": "Contact:",
-    "description": "DentKlar is a desktop application for automatically creating and sending emails with PDF attachments."
+    "description": "DentKlar is a desktop application for automatically creating and sending emails with PDF attachments.",
+    "checkUpdate": "Check for Updates",
+    "installUpdate": "Install Update & Restart",
+    "checking": "Checking for updates...",
+    "updateAvailable": "Update available: Version {{version}}",
+    "upToDate": "You are using the latest version",
+    "updateError": "Update error",
+    "downloading": "Downloading update...",
+    "updateReady": "Update {{version}} ready to install",
+    "checkFailed": "Failed to check for updates"
   },
   "compose": {
     "title": "✉️ Compose Email",

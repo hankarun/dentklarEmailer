@@ -52,4 +52,32 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('templates-updated', callback);
     return () => ipcRenderer.removeListener('templates-updated', callback);
   },
+
+  // Auto-update
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  quitAndInstall: () => ipcRenderer.invoke('quit-and-install'),
+  onUpdateChecking: (callback: () => void) => {
+    ipcRenderer.on('update-checking', callback);
+    return () => ipcRenderer.removeListener('update-checking', callback);
+  },
+  onUpdateAvailable: (callback: (info: any) => void) => {
+    ipcRenderer.on('update-available', (_, info) => callback(info));
+    return () => ipcRenderer.removeAllListeners('update-available');
+  },
+  onUpdateNotAvailable: (callback: (info: any) => void) => {
+    ipcRenderer.on('update-not-available', (_, info) => callback(info));
+    return () => ipcRenderer.removeAllListeners('update-not-available');
+  },
+  onUpdateError: (callback: (error: string) => void) => {
+    ipcRenderer.on('update-error', (_, error) => callback(error));
+    return () => ipcRenderer.removeAllListeners('update-error');
+  },
+  onUpdateDownloadProgress: (callback: (progress: any) => void) => {
+    ipcRenderer.on('update-download-progress', (_, progress) => callback(progress));
+    return () => ipcRenderer.removeAllListeners('update-download-progress');
+  },
+  onUpdateDownloaded: (callback: (info: any) => void) => {
+    ipcRenderer.on('update-downloaded', (_, info) => callback(info));
+    return () => ipcRenderer.removeAllListeners('update-downloaded');
+  },
 });

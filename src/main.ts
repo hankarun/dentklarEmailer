@@ -220,18 +220,57 @@ app.on('ready', () => {
     initDatabase();
   });
 
-  // Auto-updater: only check for updates in packaged app
+  // Auto-updater setup
   if (app.isPackaged) {
+    // Configure auto-updater
     autoUpdater.autoDownload = true;
-    autoUpdater.checkForUpdatesAndNotify();
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.autoRunAppAfterInstall = true;
 
-    autoUpdater.on('update-available', () => {
-      mainWindow?.webContents.send('update-available');
+    // Log updater events
+    autoUpdater.logger = {
+      info: (message: any) => console.log('[AutoUpdater]', message),
+      warn: (message: any) => console.warn('[AutoUpdater]', message),
+      error: (message: any) => console.error('[AutoUpdater]', message),
+      debug: (message: any) => console.log('[AutoUpdater Debug]', message),
+    };
+
+    autoUpdater.on('checking-for-update', () => {
+      console.log('[AutoUpdater] Checking for update...');
+      mainWindow?.webContents.send('update-checking');
     });
 
-    autoUpdater.on('update-downloaded', () => {
-      mainWindow?.webContents.send('update-downloaded');
+    autoUpdater.on('update-available', (info) => {
+      console.log('[AutoUpdater] Update available:', info.version);
+      mainWindow?.webContents.send('update-available', info);
     });
+
+    autoUpdater.on('update-not-available', (info) => {
+      console.log('[AutoUpdater] Update not available:', info.version);
+      mainWindow?.webContents.send('update-not-available', info);
+    });
+
+    autoUpdater.on('error', (err) => {
+      console.error('[AutoUpdater] Error:', err);
+      mainWindow?.webContents.send('update-error', err.message);
+    });
+
+    autoUpdater.on('download-progress', (progressObj) => {
+      console.log('[AutoUpdater] Download progress:', progressObj.percent);
+      mainWindow?.webContents.send('update-download-progress', progressObj);
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      console.log('[AutoUpdater] Update downloaded:', info.version);
+      mainWindow?.webContents.send('update-downloaded', info);
+    });
+
+    // Check for updates after a short delay to ensure window is ready
+    setTimeout(() => {
+      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+        console.error('[AutoUpdater] Check for updates failed:', err);
+      });
+    }, 3000);
   }
 });
 
@@ -745,13 +784,18 @@ ipcMain.handle('delete-user-email', async (_, id: number) => {
 // Auto-update IPC Handlers
 ipcMain.handle('check-for-updates', async () => {
   if (app.isPackaged) {
-    return autoUpdater.checkForUpdatesAndNotify();
+    try {
+      const result = await autoUpdater.checkForUpdates();
+      return { success: true, result };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
-  return null;
+  return { success: false, error: 'Updates only available in packaged app' };
 });
 
 ipcMain.handle('quit-and-install', () => {
-  autoUpdater.quitAndInstall();
+  autoUpdater.quitAndInstall(false, true);
 });
 
 ipcMain.handle('get-app-version', () => {

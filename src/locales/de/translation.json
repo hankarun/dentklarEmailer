@@ -15,7 +15,16 @@
     "version": "Version:",
     "developer": "Entwickler:",
     "contact": "Kontakt:",
-    "description": "DentKlar ist eine Desktop-Anwendung zum automatischen Erstellen und Versenden von E-Mails mit PDF-Anhängen."
+    "description": "DentKlar ist eine Desktop-Anwendung zum automatischen Erstellen und Versenden von E-Mails mit PDF-Anhängen.",
+    "checkUpdate": "Nach Updates suchen",
+    "installUpdate": "Update installieren & neu starten",
+    "checking": "Suche nach Updates...",
+    "updateAvailable": "Update verfügbar: Version {{version}}",
+    "upToDate": "Sie verwenden die neueste Version",
+    "updateError": "Update-Fehler",
+    "downloading": "Update wird heruntergeladen...",
+    "updateReady": "Update {{version}} bereit zur Installation",
+    "checkFailed": "Fehler bei der Update-Suche"
   },
   "compose": {
     "title": "✉️ E-Mail verfassen",

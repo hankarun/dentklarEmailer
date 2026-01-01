@@ -46,6 +46,15 @@ declare global {
       deleteUserEmail: (id: number) => Promise<{ success: boolean; error?: string }>;
       // Events
       onTemplatesUpdated: (callback: () => void) => () => void;
+      // Auto-update
+      checkForUpdates: () => Promise<{ success: boolean; result?: any; error?: string }>;
+      quitAndInstall: () => void;
+      onUpdateChecking: (callback: () => void) => () => void;
+      onUpdateAvailable: (callback: (info: any) => void) => () => void;
+      onUpdateNotAvailable: (callback: (info: any) => void) => () => void;
+      onUpdateError: (callback: (error: string) => void) => () => void;
+      onUpdateDownloadProgress: (callback: (progress: any) => void) => () => void;
+      onUpdateDownloaded: (callback: (info: any) => void) => () => void;
     };
   }
 }
@@ -1244,6 +1253,14 @@ function initTemplatesPage() {
 function initAboutPage() {
   // Load and display the app version
   const versionElement = document.getElementById('app-version');
+  const checkUpdateBtn = document.getElementById('check-update-btn') as HTMLButtonElement;
+  const installUpdateBtn = document.getElementById('install-update-btn') as HTMLButtonElement;
+  const updateStatus = document.getElementById('update-status') as HTMLDivElement;
+  const updateProgress = document.getElementById('update-progress') as HTMLDivElement;
+  const updateProgressBar = document.getElementById('update-progress-bar') as HTMLDivElement;
+  const updateProgressText = document.getElementById('update-progress-text') as HTMLSpanElement;
+
+  let updateDownloaded = false;
   
   if (versionElement) {
     window.electronAPI.getAppVersion().then(version => {
@@ -1251,5 +1268,70 @@ function initAboutPage() {
     }).catch(() => {
       versionElement.textContent = '1.0.0';
     });
+  }
+
+  // Check for updates button
+  checkUpdateBtn?.addEventListener('click', async () => {
+    checkUpdateBtn.disabled = true;
+    checkUpdateBtn.textContent = t('about.checking') || 'Suche nach Updates...';
+    updateStatus.textContent = '';
+    updateStatus.className = 'update-status';
+    
+    try {
+      const result = await window.electronAPI.checkForUpdates();
+      if (!result.success) {
+        showUpdateStatus(result.error || t('about.checkFailed'), 'error');
+      }
+      // Status will be updated via events
+    } catch (error) {
+      showUpdateStatus(t('about.checkFailed') || 'Fehler bei der Update-Suche', 'error');
+    } finally {
+      checkUpdateBtn.disabled = false;
+      checkUpdateBtn.textContent = t('about.checkUpdate') || 'Nach Updates suchen';
+    }
+  });
+
+  // Install update button
+  installUpdateBtn?.addEventListener('click', () => {
+    window.electronAPI.quitAndInstall();
+  });
+
+  // Update event listeners
+  window.electronAPI.onUpdateChecking(() => {
+    showUpdateStatus(t('about.checking') || 'Suche nach Updates...', 'info');
+  });
+
+  window.electronAPI.onUpdateAvailable((info: any) => {
+    showUpdateStatus(t('about.updateAvailable', { version: info.version }) || `Update verfügbar: ${info.version}`, 'info');
+    updateProgress.style.display = 'flex';
+  });
+
+  window.electronAPI.onUpdateNotAvailable(() => {
+    showUpdateStatus(t('about.upToDate') || 'Sie verwenden die neueste Version', 'success');
+  });
+
+  window.electronAPI.onUpdateError((error: string) => {
+    showUpdateStatus(`${t('about.updateError') || 'Update-Fehler'}: ${error}`, 'error');
+    updateProgress.style.display = 'none';
+  });
+
+  window.electronAPI.onUpdateDownloadProgress((progress: any) => {
+    const percent = Math.round(progress.percent || 0);
+    updateProgressBar.style.width = `${percent}%`;
+    updateProgressText.textContent = `${percent}%`;
+    showUpdateStatus(t('about.downloading') || 'Update wird heruntergeladen...', 'info');
+  });
+
+  window.electronAPI.onUpdateDownloaded((info: any) => {
+    updateDownloaded = true;
+    updateProgress.style.display = 'none';
+    showUpdateStatus(t('about.updateReady', { version: info.version }) || `Update ${info.version} bereit zur Installation`, 'success');
+    installUpdateBtn.style.display = 'inline-block';
+    checkUpdateBtn.style.display = 'none';
+  });
+
+  function showUpdateStatus(message: string, type: 'success' | 'error' | 'info') {
+    updateStatus.textContent = message;
+    updateStatus.className = `update-status ${type}`;
   }
 }
