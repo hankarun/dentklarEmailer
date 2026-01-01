@@ -10,6 +10,19 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { PublisherGithub } from '@electron-forge/publisher-github';
 import path from 'path';
 import fs from 'fs';
+import yaml from 'js-yaml';
+import crypto from 'crypto';
+
+// Read package.json for version and other info
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
+
+// Helper function to calculate SHA512 hash of a file
+function calculateSha512(filePath: string): string {
+  const fileBuffer = fs.readFileSync(filePath);
+  const hashSum = crypto.createHash('sha512');
+  hashSum.update(fileBuffer);
+  return hashSum.digest('base64');
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -61,6 +74,55 @@ const config: ForgeConfig = {
           fs.cpSync(srcModule, destModule, { recursive: true });
         }
       }
+
+      // Generate app-update.yml for electron-updater
+      const appUpdateYml = {
+        owner: 'hankarun',
+        repo: 'dentklarEmailer',
+        provider: 'github',
+      };
+
+      const ymlContent = yaml.dump(appUpdateYml);
+      fs.writeFileSync(path.join(buildPath, 'app-update.yml'), ymlContent, 'utf-8');
+      console.log('[Forge Hook] Created app-update.yml for electron-updater');
+    },
+
+    postMake: async (_config, makeResults) => {
+      // Generate latest.yml for electron-updater after making
+      for (const result of makeResults) {
+        if (result.platform === 'win32') {
+          const outDir = path.dirname(result.artifacts[0]);
+          
+          // Find the setup exe (Squirrel installer)
+          const setupExe = result.artifacts.find(a => a.endsWith('.exe') && a.includes('Setup'));
+          
+          if (setupExe) {
+            const fileName = path.basename(setupExe);
+            const fileSize = fs.statSync(setupExe).size;
+            const sha512 = calculateSha512(setupExe);
+            
+            const latestYml = {
+              version: packageJson.version,
+              files: [{
+                url: fileName,
+                sha512: sha512,
+                size: fileSize,
+              }],
+              path: fileName,
+              sha512: sha512,
+              releaseDate: new Date().toISOString(),
+            };
+
+            const latestYmlPath = path.join(outDir, 'latest.yml');
+            fs.writeFileSync(latestYmlPath, yaml.dump(latestYml), 'utf-8');
+            console.log('[Forge Hook] Created latest.yml at:', latestYmlPath);
+            
+            // Add latest.yml to artifacts so it gets published
+            result.artifacts.push(latestYmlPath);
+          }
+        }
+      }
+      return makeResults;
     },
   },
   plugins: [
