@@ -14,6 +14,7 @@ interface Template {
 declare global {
   interface Window {
     electronAPI: {
+      getAppVersion: () => Promise<string>;
       saveSMTPSettings: (settings: any) => Promise<any>;
       getSMTPSettings: () => Promise<any>;
       testSMTPConnection: (settings: any) => Promise<any>;
@@ -62,6 +63,7 @@ initBulkPage();
 initHistoryPage();
 initSettingsPage();
 initTemplatesPage();
+initAboutPage();
 
 // Apply translations on load
 updateAllTranslations();
@@ -82,6 +84,8 @@ if (page === 'settings') {
   showPage('history');
 } else if (page === 'bulk') {
   showPage('bulk');
+} else if (page === 'about') {
+  showPage('about');
 } else {
   showPage('compose');
 }
@@ -1234,5 +1238,18 @@ function initTemplatesPage() {
     setTimeout(() => {
       templateStatus.className = 'status-message';
     }, 3000);
+  }
+}
+
+function initAboutPage() {
+  // Load and display the app version
+  const versionElement = document.getElementById('app-version');
+  
+  if (versionElement) {
+    window.electronAPI.getAppVersion().then(version => {
+      versionElement.textContent = version;
+    }).catch(() => {
+      versionElement.textContent = '1.0.0';
+    });
   }
 }

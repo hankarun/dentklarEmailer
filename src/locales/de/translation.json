@@ -7,7 +7,15 @@
     "bulk": "📨 Massenversand",
     "history": "📋 Bisherige E-Mails",
     "templates": "📝 Vorlagen",
-    "settings": "⚙️ Einstellungen"
+    "settings": "⚙️ Einstellungen",
+    "about": "ℹ️ Über"
+  },
+  "about": {
+    "title": "ℹ️ Über DentKlar",
+    "version": "Version:",
+    "developer": "Entwickler:",
+    "contact": "Kontakt:",
+    "description": "DentKlar ist eine Desktop-Anwendung zum automatischen Erstellen und Versenden von E-Mails mit PDF-Anhängen."
   },
   "compose": {
     "title": "✉️ E-Mail verfassen",

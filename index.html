@@ -19,6 +19,9 @@
           <li><a href="#" class="nav-link" data-page="templates" data-i18n="nav.templates">📝 Vorlagen</a></li>
           <li><a href="#" class="nav-link" data-page="settings" data-i18n="nav.settings">⚙️ Einstellungen</a></li>
         </ul>
+        <div class="nav-footer">
+          <a href="#" class="nav-link" data-page="about" data-i18n="nav.about">ℹ️ Über</a>
+        </div>
       </nav>
 
       <div id="app-container">
@@ -249,6 +252,41 @@
               </form>
 
               <div id="template-status" class="status-message"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- About Page -->
+        <div id="about-page" class="page" style="display: none;">
+          <h2 data-i18n="about.title">ℹ️ Über DentKlar</h2>
+          
+          <div class="about-content">
+            <div class="about-logo">
+              <img src="/img/Dentklar-logo.svg" alt="DentKlar" class="about-logo-img">
+            </div>
+            
+            <div class="about-info">
+              <div class="about-item">
+                <span class="about-label" data-i18n="about.version">Version:</span>
+                <span class="about-value" id="app-version">1.0.0</span>
+              </div>
+              
+              <div class="about-item">
+                <span class="about-label" data-i18n="about.developer">Entwickler:</span>
+                <span class="about-value">Ali Iskender Turan</span>
+              </div>
+              
+              <div class="about-item">
+                <span class="about-label" data-i18n="about.contact">Kontakt:</span>
+                <a href="mailto:aliiskenderturan@gmail.com" class="about-email">
+                  <span class="email-icon">✉️</span>
+                  aliiskenderturan@gmail.com
+                </a>
+              </div>
+            </div>
+            
+            <div class="about-description">
+              <p data-i18n="about.description">DentKlar ist eine Desktop-Anwendung zum automatischen Erstellen und Versenden von E-Mails mit PDF-Anhängen.</p>
             </div>
           </div>
         </div>

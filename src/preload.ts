@@ -2,6 +2,9 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  // App Info
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  
   // SMTP Settings
   saveSMTPSettings: (settings: any) => ipcRenderer.invoke('save-smtp-settings', settings),
   getSMTPSettings: () => ipcRenderer.invoke('get-smtp-settings'),

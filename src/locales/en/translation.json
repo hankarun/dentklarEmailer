@@ -7,7 +7,15 @@
     "bulk": "📨 Bulk Send",
     "history": "📋 Previous Emails",
     "templates": "📝 Templates",
-    "settings": "⚙️ Settings"
+    "settings": "⚙️ Settings",
+    "about": "ℹ️ About"
+  },
+  "about": {
+    "title": "ℹ️ About DentKlar",
+    "version": "Version:",
+    "developer": "Developer:",
+    "contact": "Contact:",
+    "description": "DentKlar is a desktop application for automatically creating and sending emails with PDF attachments."
   },
   "compose": {
     "title": "✉️ Compose Email",
