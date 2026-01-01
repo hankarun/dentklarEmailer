@@ -12,6 +12,7 @@ import path from 'path';
 import fs from 'fs';
 import yaml from 'js-yaml';
 import crypto from 'crypto';
+import { execSync } from 'child_process';
 
 // Read package.json for version and other info
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'));
@@ -22,6 +23,25 @@ function calculateSha512(filePath: string): string {
   const hashSum = crypto.createHash('sha512');
   hashSum.update(fileBuffer);
   return hashSum.digest('base64');
+}
+
+// Helper function to create git tag if it doesn't exist
+function ensureGitTag(version: string): void {
+  const tagName = `v${version}`;
+  try {
+    // Check if tag exists
+    execSync(`git rev-parse ${tagName}`, { stdio: 'ignore' });
+    console.log(`[Forge Hook] Tag ${tagName} already exists`);
+  } catch {
+    // Tag doesn't exist, create it
+    try {
+      execSync(`git tag ${tagName}`, { stdio: 'inherit' });
+      execSync(`git push origin ${tagName}`, { stdio: 'inherit' });
+      console.log(`[Forge Hook] Created and pushed tag ${tagName}`);
+    } catch (e) {
+      console.error(`[Forge Hook] Failed to create tag: ${e}`);
+    }
+  }
 }
 
 const config: ForgeConfig = {
@@ -38,8 +58,8 @@ const config: ForgeConfig = {
         owner: 'hankarun',
         name: 'dentklarEmailer',
       },
-      prerelease: false,
-      draft: true,
+      prerelease: true,
+      draft: false,
     }),
   ],
   makers: [
@@ -88,6 +108,9 @@ const config: ForgeConfig = {
     },
 
     postMake: async (_config, makeResults) => {
+      // Create git tag for this version before publishing
+      ensureGitTag(packageJson.version);
+
       // Generate latest.yml for electron-updater after making
       for (const result of makeResults) {
         if (result.platform === 'win32') {
