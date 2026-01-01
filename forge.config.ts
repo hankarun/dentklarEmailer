@@ -35,6 +35,7 @@ const config: ForgeConfig = {
         'bindings',
         'file-uri-to-path',
         'pdf-parse',
+        'node-ensure',
         'keytar',
         'i18next',
       ];
