@@ -15,6 +15,7 @@ declare global {
   interface Window {
     electronAPI: {
       getAppVersion: () => Promise<string>;
+      getFilePath: (file: File) => string;
       saveSMTPSettings: (settings: any) => Promise<any>;
       getSMTPSettings: () => Promise<any>;
       testSMTPConnection: (settings: any) => Promise<any>;
@@ -428,7 +429,61 @@ function initComposePage() {
   dropZone?.addEventListener('drop', async (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
-    await handlePDFSelection();
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.type === 'application/pdf') {
+        const filePath = await window.electronAPI.getFilePath(file);
+        selectedFile = filePath;
+        const fileName = filePath.split('/').pop() || filePath.split('\\').pop();
+        fileNameDisplay.textContent = `📄 ${fileName}`;
+        
+        // Extract data from PDF
+        showStatus(t('compose.extracting'), 'success');
+        const extractResult = await window.electronAPI.extractPDFData(filePath);
+        
+        if (extractResult.success && extractResult.data) {
+          // Set the Anrede field with extracted salutation
+          if (extractResult.data.anrede) {
+            anredeSelect.value = extractResult.data.anrede;
+          }
+          
+          // Set the name field with extracted data
+          if (extractResult.data.name) {
+            nameInput.value = extractResult.data.name;
+            const anredeText = extractResult.data.anrede ? `${extractResult.data.anrede} ` : '';
+            showStatus(t('compose.extracted', { anrede: anredeText, name: extractResult.data.name }), 'success');
+            
+            // Look up saved email for this name
+            const emailResult = await window.electronAPI.getUserEmailByName(extractResult.data.name);
+            if (emailResult.success && emailResult.userEmail && emailResult.userEmail.email) {
+              emailInput.value = emailResult.userEmail.email;
+              emailInput.dataset.autoFilled = 'true';
+            }
+          }
+          
+          // Apply current template with extracted data
+          if (selectedTemplateId) {
+            const template = templates.find(t => t.id === selectedTemplateId);
+            if (template) {
+              // Set subject from template
+              subjectInput.value = template.subject || '';
+              applyTemplate(template, extractResult.data.anrede || '', extractResult.data.name || '');
+            }
+          }
+          
+          // Show extracted text for debugging
+          if (extractResult.data.extractedText) {
+            console.log('Extracted text:', extractResult.data.extractedText);
+          }
+        } else {
+          showStatus(extractResult.error || 'Failed to extract data from PDF', 'error');
+        }
+      } else {
+        showStatus(t('compose.pdfOnly') || 'Please drop a PDF file', 'error');
+      }
+    }
   });
 
   // Browse button click
@@ -577,7 +632,17 @@ function initBulkPage() {
   dropZone?.addEventListener('drop', async (e) => {
     e.preventDefault();
     dropZone.classList.remove('drag-over');
-    await handleMultiplePDFSelection();
+    
+    const files = e.dataTransfer?.files;
+    if (files && files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.type === 'application/pdf') {
+          const filePath = await window.electronAPI.getFilePath(file);
+          await addPDFEntry(filePath);
+        }
+      }
+    }
   });
 
   browseBtnSpan?.addEventListener('click', async () => {

@@ -1,9 +1,15 @@
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   // App Info
   getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  
+  // File path utilities
+  getFilePath: (file: File) => {
+    const path = webUtils.getPathForFile(file);
+    return path;
+  },
   
   // SMTP Settings
   saveSMTPSettings: (settings: any) => ipcRenderer.invoke('save-smtp-settings', settings),
