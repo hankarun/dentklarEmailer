@@ -5,7 +5,6 @@ import nodemailer from 'nodemailer';
 import Store from 'electron-store';
 import fs from 'node:fs';
 import keytar from 'keytar';
-import pdfParse from 'pdf-parse';
 import { autoUpdater } from 'electron-updater';
 
 // Database imports
@@ -16,6 +15,7 @@ import {
   emailHistoryOperations,
   userEmailOperations,
 } from './database';
+import { extractPdfData } from './pdf-parser';
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -482,156 +482,7 @@ ipcMain.handle('select-multiple-pdfs', async () => {
 });
 
 ipcMain.handle('extract-pdf-data', async (_, filePath: string) => {
-  try {
-    const dataBuffer = fs.readFileSync(filePath);
-    const data = await pdfParse(dataBuffer);
-    const text = data.text;
-
-    let name = '';
-    let anrede = '';
-    let extractedText = '';
-    let parsingMethod = '';
-
-    // Helper function to extract name and anrede from lines
-    const extractFromLines = (lines: string[]): { name: string; anrede: string } => {
-      let extractedName = '';
-      let extractedAnrede = '';
-      
-      if (lines.length > 0) {
-        let nameLineIndex = 0;
-        for (let i = 0; i < Math.min(lines.length, 5); i++) {
-          const line = lines[i].trim();
-          // Check if this line is a title (Herrn, Frau, etc.)
-          if (line.match(/^(Herrn|Herr|Frau|Dr\.|Prof\.)$/i)) {
-            // Normalize "Herrn" (accusative) to "Herr" (nominative)
-            if (line.toLowerCase() === 'herrn') {
-              extractedAnrede = 'Herr';
-            } else {
-              extractedAnrede = line.charAt(0).toUpperCase() + line.slice(1).toLowerCase();
-            }
-            nameLineIndex = i + 1;
-            break;
-          } else if (i === 0) {
-            nameLineIndex = 0;
-          }
-        }
-        
-        if (lines[nameLineIndex]) {
-          extractedName = lines[nameLineIndex].trim();
-        }
-      }
-      
-      return { name: extractedName, anrede: extractedAnrede };
-    };
-
-    // Method 1: Search for "Antragsnummer" marker - name comes directly after
-    const antragsnummerMarker = 'Antragsnummer';
-    const antragsnummerIndex = text.indexOf(antragsnummerMarker);
-    
-    if (antragsnummerIndex !== -1) {
-      const textAfterAntragsnummer = text.substring(antragsnummerIndex + antragsnummerMarker.length);
-      const lines = textAfterAntragsnummer.split('\n').filter(line => line.trim().length > 0);
-      
-      // Name comes directly after Antragsnummer
-      // Format: Antragsnummer -> Name -> Address
-      if (lines.length > 0) {
-        // First non-empty line after Antragsnummer is the name
-        const potentialName = lines[0].trim();
-        // Validate it looks like a name (not an address or number)
-        if (potentialName && !potentialName.match(/^\d/) && !potentialName.match(/^(Str\.|Straße|str\.|D\s*\d)/i)) {
-          name = potentialName;
-          extractedText = lines.slice(0, 5).join('\n');
-          parsingMethod = 'Antragsnummer';
-        }
-      }
-    }
-
-    // Method 2: Search for "Ugur Kaganaslan, Dentklar Digital Dental Studio BaG" marker for Anrede (Frau/Herr)
-    const dentklarMarker = 'Ugur Kaganaslan, Dentklar Digital Dental Studio BaG, Nassauische Str. 30,10717 Berlin';
-    const dentklarIndex = text.indexOf(dentklarMarker);
-    
-    if (dentklarIndex !== -1) {
-      const textAfterDentklar = text.substring(dentklarIndex + dentklarMarker.length);
-      const lines = textAfterDentklar.split('\n').filter(line => line.trim().length > 0);
-      
-      // Look for Anrede (Frau/Herr) after this marker
-      for (let i = 0; i < Math.min(lines.length, 3); i++) {
-        const line = lines[i].trim();
-        if (line.match(/^(Herrn|Herr|Frau)$/i)) {
-          if (line.toLowerCase() === 'herrn') {
-            anrede = 'Herr';
-          } else {
-            anrede = line.charAt(0).toUpperCase() + line.slice(1).toLowerCase();
-          }
-          // If we don't have name yet, try to get it from next line
-          if (!name && lines[i + 1]) {
-            name = lines[i + 1].trim();
-          }
-          if (!parsingMethod) {
-            parsingMethod = 'Dentklar marker';
-            extractedText = lines.slice(0, 5).join('\n');
-          }
-          break;
-        }
-      }
-    }
-
-    // Method 3: Original marker "ZÄ Turan & Kaganaslan"
-    if (!name) {
-      const originalMarker = 'ZÄ Turan & Kaganaslan, Nassauische Str. 30, 10717 Berlin';
-      const originalMarkerIndex = text.indexOf(originalMarker);
-
-      if (originalMarkerIndex !== -1) {
-        const textAfterMarker = text.substring(originalMarkerIndex + originalMarker.length);
-        const lines = textAfterMarker.split('\n').filter(line => line.trim().length > 0);
-        
-        const result = extractFromLines(lines);
-        if (result.name) {
-          name = result.name;
-          anrede = result.anrede;
-          extractedText = lines.slice(0, 5).join('\n');
-          parsingMethod = 'ZÄ Turan marker';
-        }
-      }
-    }
-
-    // Method 4: Try to find Herrn/Frau anywhere in the document
-    if (!name) {
-      const anredeMatch = text.match(/(Herrn|Herr|Frau)\s*\n\s*([A-ZÄÖÜa-zäöüß\-]+\s+[A-ZÄÖÜa-zäöüß\-]+)/i);
-      if (anredeMatch) {
-        if (anredeMatch[1].toLowerCase() === 'herrn') {
-          anrede = 'Herr';
-        } else {
-          anrede = anredeMatch[1].charAt(0).toUpperCase() + anredeMatch[1].slice(1).toLowerCase();
-        }
-        name = anredeMatch[2].trim();
-        extractedText = anredeMatch[0];
-        parsingMethod = 'Anrede pattern search';
-      }
-    }
-
-    if (!name) {
-      return { 
-        success: false, 
-        error: 'Could not extract patient name from PDF. None of the parsing methods found valid data.' 
-      };
-    }
-
-    return { 
-      success: true, 
-      data: {
-        name: name,
-        anrede: anrede,
-        extractedText: extractedText,
-        parsingMethod: parsingMethod // For debugging which method worked
-      }
-    };
-  } catch (error) {
-    return { 
-      success: false, 
-      error: error.message 
-    };
-  }
+  return extractPdfData(filePath);
 });
 
 ipcMain.on('close-window', (event) => {
