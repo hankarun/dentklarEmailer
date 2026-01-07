@@ -91,6 +91,41 @@ Templates support the following placeholders:
 - `{{ANREDE}}` - Salutation (Herr/Frau)
 - `{{ANREDE_SUFFIX}}` - Suffix for formal address (r/empty)
 
+## Auto-Update
+
+The application supports automatic updates via GitHub releases using `electron-updater`. When a new version is published, the app will:
+
+1. Check for updates automatically at startup (packaged app only)
+2. Download the update in the background
+3. Notify the user when an update is ready
+4. Install the update when the app is quit
+
+### Auto-Update Configuration
+
+The `app-update.yml` file in the root directory configures the update provider:
+
+```yaml
+owner: hankarun
+repo: dentklarEmailer
+provider: github
+```
+
+This file is automatically included in the packaged app as an extra resource so that `electron-updater` can find it at runtime. It tells the updater to check for new releases on the GitHub repository.
+
+### Publishing Updates
+
+To publish a new version:
+
+```bash
+# Update version in package.json
+npm version <major|minor|patch>
+
+# Build and publish to GitHub releases
+npm run publish
+```
+
+The build process automatically generates `latest.yml` with update metadata and publishes it along with the installer to GitHub releases.
+
 ## Database
 
 The app uses SQLite to store:
