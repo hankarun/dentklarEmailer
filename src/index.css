@@ -141,6 +141,35 @@ body {
   width: 100%;
 }
 
+/* Compose Two Column Layout */
+.compose-two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+.compose-column-left {
+  display: flex;
+  flex-direction: column;
+}
+
+.compose-column-right {
+  display: flex;
+  flex-direction: column;
+}
+
+.compose-column-right .form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.compose-column-right textarea {
+  flex: 1;
+  min-height: 300px;
+  height: 100%;
+}
+
 /* History page should fill space */
 #history-page {
   display: flex;
