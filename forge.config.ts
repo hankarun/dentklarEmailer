@@ -51,6 +51,9 @@ const config: ForgeConfig = {
       unpack: '**/{better-sqlite3,bindings,file-uri-to-path}/**/*',
     },
     icon: './img/dlogo',
+    extraResource: [
+      './app-update.yml',
+    ],
   },
   rebuildConfig: {},
   publishers: [
@@ -95,17 +98,6 @@ const config: ForgeConfig = {
           fs.cpSync(srcModule, destModule, { recursive: true });
         }
       }
-
-      // Generate app-update.yml for electron-updater
-      const appUpdateYml = {
-        owner: 'hankarun',
-        repo: 'dentklarEmailer',
-        provider: 'github',
-      };
-
-      const ymlContent = yaml.dump(appUpdateYml);
-      fs.writeFileSync(path.join(buildPath, 'app-update.yml'), ymlContent, 'utf-8');
-      console.log('[Forge Hook] Created app-update.yml for electron-updater');
     },
 
     postMake: async (_config, makeResults) => {
