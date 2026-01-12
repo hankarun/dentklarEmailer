@@ -55,6 +55,9 @@ function convertQuillHtmlToEmailHtml(html: string): string {
   // Ensure links have proper styling
   html = html.replace(/<a /g, '<a style="color: #0066cc; text-decoration: underline;" ');
   
+  // Ensure images have proper styling and attributes for email compatibility
+  html = html.replace(/<img /g, '<img style="max-width: 100%; height: auto; display: block;" ');
+  
   return html;
 }
 

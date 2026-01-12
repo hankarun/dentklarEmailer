@@ -157,42 +157,18 @@
           <h2 data-i18n="signatures.title">✍️ Signaturen verwalten</h2>
 
           <div class="signature-layout">
-            <!-- Signature List -->
-            <div class="signature-list-container">
-              <div class="signature-list-header">
-                <h3 data-i18n="signatures.listTitle">Signaturen</h3>
-              </div>
-              <button type="button" id="new-signature-btn" class="btn btn-small btn-primary" data-i18n="signatures.new">+ Neu</button>
-              <ul id="signature-list" class="signature-list">
-                <!-- Signatures will be populated here -->
-              </ul>
-            </div>
-
             <!-- Signature Editor -->
             <div class="signature-editor-container">
               <form id="signature-form">
                 <input type="hidden" id="signature-id" value="">
                 
                 <div class="form-group">
-                  <label for="signature-name" data-i18n="signatures.name">Name:</label>
-                  <input type="text" id="signature-name" name="name" required data-i18n-placeholder="signatures.namePlaceholder" placeholder="Signaturname">
-                </div>
-
-                <div class="form-group">
                   <label for="signature-editor" data-i18n="signatures.content">Inhalt:</label>
                   <div id="signature-editor" class="quill-editor"></div>
                   <small class="hint" data-i18n="signatures.contentHint">Sie können Text formatieren und Bilder einfügen</small>
                 </div>
 
-                <div class="form-group">
-                  <label class="checkbox-label">
-                    <input type="checkbox" id="signature-default" name="is_default">
-                    <span data-i18n="signatures.setDefault">Als Standard festlegen</span>
-                  </label>
-                </div>
-
                 <div class="button-group">
-                  <button type="button" id="delete-signature-btn" class="btn btn-danger" style="display: none;" data-i18n="signatures.delete">Löschen</button>
                   <button type="submit" id="save-signature-btn" class="btn btn-primary" data-i18n="signatures.save">Speichern</button>
                 </div>
               </form>

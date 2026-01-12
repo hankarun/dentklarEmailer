@@ -7,7 +7,7 @@
     "bulk": "📨 Massenversand",
     "history": "📋 Bisherige E-Mails",
     "templates": "📝 Vorlagen",
-    "signatures": "✍️ Signaturen",
+    "signatures": "✍️ Signatur",
     "settings": "⚙️ Einstellungen",
     "about": "ℹ️ Über"
   },
@@ -105,8 +105,8 @@
     "confirmDelete": "Vorlage wirklich löschen?"
   },
   "signatures": {
-    "title": "✍️ Signaturen verwalten",
-    "listTitle": "Signaturen",
+    "title": "✍️ Signatur verwalten",
+    "listTitle": "Signatur",
     "new": "+ Neu",
     "name": "Name",
     "namePlaceholder": "Signaturname",
