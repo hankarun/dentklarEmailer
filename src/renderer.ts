@@ -1,4 +1,7 @@
 import './index.css';
+import './quill-custom.css';
+import Quill from 'quill';
+import 'quill/dist/quill.snow.css';
 import i18n, { t, changeLanguage, getCurrentLanguage } from './i18n';
 
 interface Template {
@@ -6,6 +9,15 @@ interface Template {
   name: string;
   subject: string;
   body: string;
+  is_default: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface Signature {
+  id: number;
+  name: string;
+  content: string;
   is_default: number;
   created_at: string;
   updated_at: string;
@@ -45,8 +57,17 @@ declare global {
       saveUserEmail: (name: string, email: string) => Promise<{ success: boolean; userEmail?: { id: number; name: string; email: string }; error?: string }>;
       searchUserEmails: (query: string) => Promise<{ success: boolean; userEmails?: Array<{ id: number; name: string; email: string }>; error?: string }>;
       deleteUserEmail: (id: number) => Promise<{ success: boolean; error?: string }>;
+      // Signature operations
+      getSignatures: () => Promise<{ success: boolean; signatures?: Signature[]; error?: string }>;
+      getSignature: (id: number) => Promise<{ success: boolean; signature?: Signature; error?: string }>;
+      getDefaultSignature: () => Promise<{ success: boolean; signature?: Signature; error?: string }>;
+      createSignature: (signature: any) => Promise<{ success: boolean; signature?: Signature; error?: string }>;
+      updateSignature: (id: number, signature: any) => Promise<{ success: boolean; signature?: Signature; error?: string }>;
+      deleteSignature: (id: number) => Promise<{ success: boolean; error?: string }>;
+      setDefaultSignature: (id: number) => Promise<{ success: boolean; error?: string }>;
       // Events
       onTemplatesUpdated: (callback: () => void) => () => void;
+      onSignaturesUpdated: (callback: () => void) => () => void;
       // Auto-update
       checkForUpdates: () => Promise<{ success: boolean; result?: any; error?: string }>;
       quitAndInstall: () => void;
@@ -73,6 +94,7 @@ initBulkPage();
 initHistoryPage();
 initSettingsPage();
 initTemplatesPage();
+initSignaturesPage();
 initAboutPage();
 
 // Apply translations on load
@@ -90,6 +112,8 @@ if (page === 'settings') {
   showPage('settings');
 } else if (page === 'templates') {
   showPage('templates');
+} else if (page === 'signatures') {
+  showPage('signatures');
 } else if (page === 'history') {
   showPage('history');
 } else if (page === 'bulk') {
@@ -162,6 +186,9 @@ function showPage(pageName: string) {
   } else if (pageName === 'compose') {
     // Dispatch event to refresh templates on compose page
     window.dispatchEvent(new CustomEvent('refresh-compose-templates'));
+  } else if (pageName === 'signatures') {
+    // Initialize or refresh signatures page
+    window.dispatchEvent(new CustomEvent('init-signatures-page'));
   }
 }
 
@@ -1311,6 +1338,217 @@ function initTemplatesPage() {
     
     setTimeout(() => {
       templateStatus.className = 'status-message';
+    }, 3000);
+  }
+}
+
+function initSignaturesPage() {
+  const signatureList = document.getElementById('signature-list') as HTMLUListElement;
+  const signatureForm = document.getElementById('signature-form') as HTMLFormElement;
+  const signatureIdInput = document.getElementById('signature-id') as HTMLInputElement;
+  const signatureNameInput = document.getElementById('signature-name') as HTMLInputElement;
+  const signatureDefaultCheckbox = document.getElementById('signature-default') as HTMLInputElement;
+  const deleteBtn = document.getElementById('delete-signature-btn') as HTMLButtonElement;
+  const newSignatureBtn = document.getElementById('new-signature-btn') as HTMLButtonElement;
+  const signatureStatus = document.getElementById('signature-status') as HTMLDivElement;
+
+  let signatures: Signature[] = [];
+  let selectedSignatureId: number | null = null;
+  let quill: Quill | null = null;
+  let isInitialized = false;
+
+  // Function to initialize Quill editor
+  function initializeQuill() {
+    if (isInitialized) return;
+    
+    const editorContainer = document.getElementById('signature-editor');
+    if (editorContainer && !quill) {
+      try {
+        quill = new Quill('#signature-editor', {
+          theme: 'snow',
+          modules: {
+            toolbar: [
+              [{ 'header': [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ 'color': [] }, { 'background': [] }],
+              [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+              [{ 'align': [] }],
+              ['link', 'image'],
+              ['clean']
+            ]
+          },
+          placeholder: 'Signaturinhalt eingeben...'
+        });
+        isInitialized = true;
+        console.log('Quill editor initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize Quill:', error);
+      }
+    }
+  }
+
+  // Listen for page show event
+  window.addEventListener('init-signatures-page', () => {
+    // Small delay to ensure DOM is ready
+    setTimeout(() => {
+      initializeQuill();
+      loadSignatures();
+    }, 100);
+  });
+
+  // Load signatures
+  loadSignatures();
+
+  // Listen for signature updates from main process
+  window.electronAPI.onSignaturesUpdated(() => {
+    loadSignatures();
+  });
+
+  // New signature button
+  newSignatureBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    initializeQuill(); // Ensure Quill is initialized
+    clearForm();
+    selectedSignatureId = null;
+    deleteBtn.style.display = 'none';
+    signatureNameInput.focus();
+  });
+
+  // Delete button
+  deleteBtn?.addEventListener('click', async () => {
+    if (!selectedSignatureId) return;
+    
+    if (!confirm(t('signatures.confirmDelete'))) return;
+
+    try {
+      const result = await window.electronAPI.deleteSignature(selectedSignatureId);
+      if (result.success) {
+        showSignatureStatus(t('signatures.deleted'), 'success');
+        clearForm();
+        selectedSignatureId = null;
+        deleteBtn.style.display = 'none';
+        loadSignatures();
+      } else {
+        showSignatureStatus(result.error || t('signatures.deleteFailed'), 'error');
+      }
+    } catch (error) {
+      showSignatureStatus(t('signatures.deleteFailed'), 'error');
+    }
+  });
+
+  // Form submission
+  signatureForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!quill) {
+      showSignatureStatus('Editor not initialized. Please wait...', 'error');
+      initializeQuill();
+      return;
+    }
+
+    const signatureData = {
+      name: signatureNameInput.value,
+      content: quill.root.innerHTML,
+      is_default: signatureDefaultCheckbox.checked ? 1 : 0,
+    };
+
+    try {
+      let result;
+      if (selectedSignatureId) {
+        result = await window.electronAPI.updateSignature(selectedSignatureId, signatureData);
+      } else {
+        result = await window.electronAPI.createSignature(signatureData);
+      }
+
+      if (result.success) {
+        showSignatureStatus(t('signatures.saved'), 'success');
+        if (result.signature) {
+          selectedSignatureId = result.signature.id;
+          deleteBtn.style.display = 'inline-block';
+        }
+        loadSignatures();
+      } else {
+        showSignatureStatus(result.error || t('signatures.saveFailed'), 'error');
+      }
+    } catch (error) {
+      showSignatureStatus(t('signatures.saveFailed'), 'error');
+    }
+  });
+
+  async function loadSignatures() {
+    try {
+      const result = await window.electronAPI.getSignatures();
+      if (result.success && result.signatures) {
+        signatures = result.signatures;
+        renderSignatureList();
+      }
+    } catch (error) {
+      console.error('Failed to load signatures:', error);
+    }
+  }
+
+  function renderSignatureList() {
+    signatureList.innerHTML = '';
+    
+    signatures.forEach(signature => {
+      const li = document.createElement('li');
+      li.className = 'signature-list-item' + (signature.id === selectedSignatureId ? ' active' : '');
+      li.innerHTML = `
+        <span class="signature-name">${signature.name}</span>
+        ${signature.is_default ? '<span class="default-badge">★</span>' : ''}
+      `;
+      li.addEventListener('click', () => {
+        selectSignature(signature);
+      });
+      signatureList.appendChild(li);
+    });
+  }
+
+  function selectSignature(signature: Signature) {
+    selectedSignatureId = signature.id;
+    signatureIdInput.value = String(signature.id);
+    signatureNameInput.value = signature.name;
+    signatureDefaultCheckbox.checked = signature.is_default === 1;
+    deleteBtn.style.display = 'inline-block';
+    
+    // Load content into Quill editor
+    if (quill) {
+      quill.root.innerHTML = signature.content;
+    }
+    
+    // Update active state in list
+    document.querySelectorAll('.signature-list-item').forEach(item => {
+      item.classList.remove('active');
+    });
+    const items = signatureList.querySelectorAll('.signature-list-item');
+    items.forEach((item, index) => {
+      if (signatures[index].id === signature.id) {
+        item.classList.add('active');
+      }
+    });
+  }
+
+  function clearForm() {
+    signatureIdInput.value = '';
+    signatureNameInput.value = '';
+    signatureDefaultCheckbox.checked = false;
+    if (quill) {
+      quill.setText('');
+    }
+    
+    document.querySelectorAll('.signature-list-item').forEach(item => {
+      item.classList.remove('active');
+    });
+  }
+
+  function showSignatureStatus(message: string, type: 'success' | 'error') {
+    signatureStatus.textContent = message;
+    signatureStatus.className = `status-message ${type}`;
+    
+    setTimeout(() => {
+      signatureStatus.className = 'status-message';
     }, 3000);
   }
 }

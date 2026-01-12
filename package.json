@@ -53,6 +53,7 @@
     "i18next": "^23.16.8",
     "keytar": "^7.9.0",
     "nodemailer": "^7.0.11",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "quill": "^2.0.3"
   }
 }

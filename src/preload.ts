@@ -53,10 +53,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
   searchUserEmails: (query: string) => ipcRenderer.invoke('search-user-emails', query),
   deleteUserEmail: (id: number) => ipcRenderer.invoke('delete-user-email', id),
 
+  // Signature operations
+  getSignatures: () => ipcRenderer.invoke('get-signatures'),
+  getSignature: (id: number) => ipcRenderer.invoke('get-signature', id),
+  getDefaultSignature: () => ipcRenderer.invoke('get-default-signature'),
+  createSignature: (signature: any) => ipcRenderer.invoke('create-signature', signature),
+  updateSignature: (id: number, signature: any) => ipcRenderer.invoke('update-signature', id, signature),
+  deleteSignature: (id: number) => ipcRenderer.invoke('delete-signature', id),
+  setDefaultSignature: (id: number) => ipcRenderer.invoke('set-default-signature', id),
+
   // Event listeners
   onTemplatesUpdated: (callback: () => void) => {
     ipcRenderer.on('templates-updated', callback);
     return () => ipcRenderer.removeListener('templates-updated', callback);
+  },
+  onSignaturesUpdated: (callback: () => void) => {
+    ipcRenderer.on('signatures-updated', callback);
+    return () => ipcRenderer.removeListener('signatures-updated', callback);
   },
 
   // Auto-update

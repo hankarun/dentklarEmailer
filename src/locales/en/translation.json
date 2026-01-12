@@ -7,6 +7,7 @@
     "bulk": "📨 Bulk Send",
     "history": "📋 Previous Emails",
     "templates": "📝 Templates",
+    "signatures": "✍️ Signatures",
     "settings": "⚙️ Settings",
     "about": "ℹ️ About"
   },
@@ -102,6 +103,23 @@
     "deleteFailed": "Delete failed",
     "saveFailed": "Save failed",
     "confirmDelete": "Really delete template?"
+  },
+  "signatures": {
+    "title": "✍️ Manage Signatures",
+    "listTitle": "Signatures",
+    "new": "+ New",
+    "name": "Name",
+    "namePlaceholder": "Signature name",
+    "content": "Content",
+    "contentHint": "You can format text and insert images",
+    "setDefault": "Set as default",
+    "delete": "Delete",
+    "save": "Save",
+    "saved": "Signature saved!",
+    "deleted": "Signature deleted!",
+    "deleteFailed": "Delete failed",
+    "saveFailed": "Save failed",
+    "confirmDelete": "Really delete signature?"
   },
   "modal": {
     "success": "✅ Success",

@@ -38,6 +38,15 @@ export interface UserEmail {
   updated_at?: string;
 }
 
+export interface Signature {
+  id?: number;
+  name: string;
+  content: string;
+  is_default: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 let db: BetterSqlite3.Database | null = null;
 
 // Get database path in user data directory
@@ -102,10 +111,21 @@ export function initDatabase(): BetterSqlite3.Database {
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
+    -- Signatures table (stores email signatures with rich text/HTML content)
+    CREATE TABLE IF NOT EXISTS signatures (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE,
+      content TEXT NOT NULL,
+      is_default INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
     -- Create index for faster queries
     CREATE INDEX IF NOT EXISTS idx_email_history_sent_at ON email_history(sent_at);
     CREATE INDEX IF NOT EXISTS idx_templates_is_default ON templates(is_default);
     CREATE INDEX IF NOT EXISTS idx_user_emails_name ON user_emails(name);
+    CREATE INDEX IF NOT EXISTS idx_signatures_is_default ON signatures(is_default);
   `);
 
   // Insert default template if no templates exist
@@ -337,6 +357,75 @@ export const userEmailOperations = {
   delete(id: number): boolean {
     const database = getDatabase();
     const result = database.prepare('DELETE FROM user_emails WHERE id = ?').run(id);
+    return result.changes > 0;
+  }
+};
+
+// Signature CRUD operations
+export const signatureOperations = {
+  getAll(): Signature[] {
+    const database = getDatabase();
+    return database.prepare('SELECT * FROM signatures ORDER BY is_default DESC, name ASC').all() as Signature[];
+  },
+
+  getById(id: number): Signature | undefined {
+    const database = getDatabase();
+    return database.prepare('SELECT * FROM signatures WHERE id = ?').get(id) as Signature | undefined;
+  },
+
+  getDefault(): Signature | undefined {
+    const database = getDatabase();
+    return database.prepare('SELECT * FROM signatures WHERE is_default = 1').get() as Signature | undefined;
+  },
+
+  create(signature: Omit<Signature, 'id' | 'created_at' | 'updated_at'>): Signature {
+    const database = getDatabase();
+    
+    // If this signature is set as default, unset other defaults
+    if (signature.is_default) {
+      database.prepare('UPDATE signatures SET is_default = 0').run();
+    }
+
+    const result = database.prepare(`
+      INSERT INTO signatures (name, content, is_default)
+      VALUES (@name, @content, @is_default)
+    `).run(signature);
+
+    return this.getById(result.lastInsertRowid as number)!;
+  },
+
+  update(id: number, signature: Partial<Omit<Signature, 'id' | 'created_at' | 'updated_at'>>): Signature | undefined {
+    const database = getDatabase();
+    
+    // If this signature is set as default, unset other defaults
+    if (signature.is_default) {
+      database.prepare('UPDATE signatures SET is_default = 0 WHERE id != ?').run(id);
+    }
+
+    const existing = this.getById(id);
+    if (!existing) return undefined;
+
+    const updated = { ...existing, ...signature };
+    
+    database.prepare(`
+      UPDATE signatures 
+      SET name = @name, content = @content, is_default = @is_default, updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+    `).run({ ...updated, id });
+
+    return this.getById(id);
+  },
+
+  delete(id: number): boolean {
+    const database = getDatabase();
+    const result = database.prepare('DELETE FROM signatures WHERE id = ?').run(id);
+    return result.changes > 0;
+  },
+
+  setDefault(id: number): boolean {
+    const database = getDatabase();
+    database.prepare('UPDATE signatures SET is_default = 0').run();
+    const result = database.prepare('UPDATE signatures SET is_default = 1 WHERE id = ?').run(id);
     return result.changes > 0;
   }
 };

@@ -1,0 +1,64 @@
+/* Quill Editor Custom Styling */
+.quill-editor {
+  margin-top: 5px;
+  height: 250px;
+  display: flex;
+  flex-direction: column;
+}
+
+.quill-editor .ql-toolbar {
+  border: 1px solid #ddd;
+  border-radius: 8px 8px 0 0;
+  background-color: #f8f9fa;
+  padding: 10px;
+  flex-shrink: 0;
+}
+
+.quill-editor .ql-container {
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  background-color: white;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-size: 14px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.quill-editor .ql-editor {
+  min-height: 200px;
+  padding: 15px;
+}
+
+.quill-editor .ql-editor:focus {
+  outline: none;
+}
+
+/* Toolbar button styling */
+.quill-editor .ql-toolbar button {
+  transition: all 0.2s;
+}
+
+.quill-editor .ql-toolbar button:hover {
+  background-color: #e9ecef;
+  border-radius: 4px;
+}
+
+.quill-editor .ql-toolbar button.ql-active {
+  background-color: #007bff;
+  color: white;
+  border-radius: 4px;
+}
+
+/* Dropdown styling */
+.quill-editor .ql-toolbar select {
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+/* Placeholder text */
+.quill-editor .ql-editor.ql-blank::before {
+  color: #999;
+  font-style: italic;
+}

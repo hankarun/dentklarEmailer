@@ -510,6 +510,89 @@ textarea {
   background: #c82333;
 }
 
+/* Signature Editor Page Styles */
+.signature-layout {
+  display: flex;
+  gap: 30px;
+  flex: 1;
+  min-height: 0;
+}
+
+.signature-list-container {
+  width: 250px;
+  flex-shrink: 0;
+  border-right: 1px solid #e0e0e0;
+  padding-right: 20px;
+  display: flex;
+  flex-direction: column;
+}
+
+.signature-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.signature-list-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 16px;
+}
+
+.signature-list-container > .btn-small {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.signature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.signature-list-item {
+  padding: 12px 15px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8f9fa;
+}
+
+.signature-list-item:hover {
+  background: #e9ecef;
+}
+
+.signature-list-item.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.signature-list-item.active .default-badge {
+  color: #ffd700;
+}
+
+.signature-name {
+  font-size: 14px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.signature-editor-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
 /* History Page Styles */
 .history-toolbar {
   display: flex;
